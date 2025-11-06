@@ -4,14 +4,10 @@
 
 #include "dao/sms_code_dao.hpp"
 #include "http/http_session.hpp"
+#include "result.hpp"
 
 namespace CIM::app {
-
-struct SmsCodeResult {
-    bool ok = false;             // 是否成功
-    std::string err;             // 错误信息
-    CIM::dao::SmsCode sms_code;  // 短信验证码信息
-};
+using SmsCodeResult = Result<CIM::dao::SmsCode>;
 
 class CommonService {
    public:

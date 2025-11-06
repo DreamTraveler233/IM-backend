@@ -3,23 +3,24 @@
 
 -- 用户表：存储用户基本信息和认证数据
 CREATE TABLE IF NOT EXISTS users (
-  id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,  -- 用户唯一ID，自增主键
+  id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,   -- 用户唯一ID，自增主键
   mobile            VARCHAR(20) NOT NULL,                         -- 手机号，唯一，用于登录
   email             VARCHAR(128),                                 -- 邮箱，可选，唯一，用于找回密码
   nickname          VARCHAR(64) NOT NULL,                         -- 昵称，显示名称
   password_hash     VARCHAR(255) NOT NULL,                        -- 密码哈希，使用PBKDF2+盐
   avatar            VARCHAR(255),                                 -- 头像URL，可选
   motto             VARCHAR(255),                                 -- 个性签名，可选
-  birthday          DATE,                                        -- 生日，可选
-  gender            TINYINT UNSIGNED NOT NULL DEFAULT 0,         -- 性别：0- 1男 2女 3未知
-  is_robot          TINYINT UNSIGNED NOT NULL DEFAULT 0,         -- 是否机器人：0否 1是
-  is_qiye           TINYINT UNSIGNED NOT NULL DEFAULT 0,         -- 是否企业用户：0否 1是
-  status            TINYINT UNSIGNED NOT NULL DEFAULT 1,         -- 账户状态：1正常 2禁用
-  last_login_at     DATETIME,                                     -- 最后登录时间
-  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+  birthday          DATE,                                         -- 生日，可选
+  gender            TINYINT UNSIGNED NOT NULL DEFAULT 0,          -- 性别：0- 1男 2女 3未知
+  online_status     VARCHAR(1) NOT NULL DEFAULT 'N',              -- 在线状态：N:离线 Y:在线
+  last_online_at    DATETIME,                                     -- 最后在线时间
+  is_robot          TINYINT UNSIGNED NOT NULL DEFAULT 0,          -- 是否机器人：0否 1是
+  is_qiye           TINYINT UNSIGNED NOT NULL DEFAULT 0,          -- 是否企业用户：0否 1是
+  status            TINYINT UNSIGNED NOT NULL DEFAULT 1,          -- 账户状态：1正常 2禁用
+  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
   updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间
-  UNIQUE KEY uq_users_mobile (mobile),                           -- 手机号唯一索引
-  UNIQUE KEY uq_users_email (email)                              -- 邮箱唯一索引
+  UNIQUE KEY uq_users_mobile (mobile),                            -- 手机号唯一索引
+  UNIQUE KEY uq_users_email (email)                               -- 邮箱唯一索引
 ) ENGINE=InnoDB;
 
 -- 用户设置：存储用户的个性化设置，如主题、通知等

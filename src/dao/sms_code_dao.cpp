@@ -9,7 +9,7 @@ namespace CIM::dao {
 
 static const char* kDBName = "default";
 
-bool SmsCodeDAO::Create(const SmsCode& code, uint64_t& out_id, std::string* err) {
+bool SmsCodeDAO::Create(const SmsCode& code, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";
@@ -37,7 +37,6 @@ bool SmsCodeDAO::Create(const SmsCode& code, uint64_t& out_id, std::string* err)
         if (err) *err = stmt->getErrStr();
         return false;
     }
-    out_id = static_cast<uint64_t>(stmt->getLastInsertId());
     return true;
 }
 
@@ -75,7 +74,7 @@ bool SmsCodeDAO::Verify(const std::string& mobile, const std::string& code,
     return MarkAsUsed(id, err);
 }
 
-bool SmsCodeDAO::MarkAsUsed(uint64_t id, std::string* err) {
+bool SmsCodeDAO::MarkAsUsed(const uint64_t id, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";
@@ -90,7 +89,7 @@ bool SmsCodeDAO::MarkAsUsed(uint64_t id, std::string* err) {
     }
     stmt->bindUint64(1, id);
     if (stmt->execute() != 0) {
-        if (err) *err = stmt->getErrStr();
+        if (err) *err = "execute failed";
         return false;
     }
     return true;
@@ -110,7 +109,7 @@ bool SmsCodeDAO::MarkExpiredAsInvalid(std::string* err) {
         return false;
     }
     if (stmt->execute() != 0) {
-        if (err) *err = stmt->getErrStr();
+        if (err) *err = "execute failed";
         return false;
     }
     return true;
@@ -130,7 +129,7 @@ bool SmsCodeDAO::DeleteInvalidCodes(std::string* err) {
         return false;
     }
     if (stmt->execute() != 0) {
-        if (err) *err = stmt->getErrStr();
+        if (err) *err = "execute failed";
         return false;
     }
     return true;

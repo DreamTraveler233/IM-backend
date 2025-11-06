@@ -1,7 +1,7 @@
 #include "api/contact_api_module.hpp"
 
 #include "app/contact_service.hpp"
-#include "base/macro.hpp"
+#include "macro.hpp"
 #include "common/common.hpp"
 #include "http/http_server.hpp"
 #include "http/http_servlet.hpp"
@@ -59,10 +59,11 @@ bool ContactApiModule::onServerReady() {
                                 CIM::http::HttpSession::ptr /*session*/) {
                                  res->setHeader("Content-Type", "application/json");
 
-                                 /*验证并提取请求中的用户ID*/
-                                 uint64_t from_id = GetUidFromToken(req, res);
-                                 if (from_id == 0) {
-                                     return 0;  // 错误响应已在 GetUidFromToken 中设置
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
+                                     return 0;
                                  }
 
                                  /*提取请求字段*/
@@ -76,7 +77,7 @@ bool ContactApiModule::onServerReady() {
 
                                  /*调用业务逻辑处理添加联系人申请*/
                                  auto result = CIM::app::ContactService::CreateContactApply(
-                                     from_id, to_id, remark);
+                                     uid_result.data, to_id, remark);
                                  if (!result.ok) {
                                      res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
                                      res->setBody(Error(result.code, result.err));
@@ -86,6 +87,7 @@ bool ContactApiModule::onServerReady() {
                                  res->setBody(Ok());
                                  return 0;
                              });
+
         /*拒绝联系人申请接口*/
         dispatch->addServlet("/api/v1/contact-apply/decline",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
@@ -111,19 +113,22 @@ bool ContactApiModule::onServerReady() {
                                  res->setBody(Ok());
                                  return 0;
                              });
+
+        /*获取好友申请列表接口*/
         dispatch->addServlet("/api/v1/contact-apply/list",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
-                                 CIM_LOG_DEBUG(g_logger) << "/api/v1/contact-apply/list";
                                  res->setHeader("Content-Type", "application/json");
 
-                                 uint64_t uid = GetUidFromToken(req, res);
-                                 if (uid == 0) {
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
                                      return 0;
                                  }
 
                                  /*获取未处理的好友申请列表*/
-                                 auto result = CIM::app::ContactService::ListContactApplies(uid);
+                                 auto result = CIM::app::ContactService::ListContactApplies(uid_result.data);
                                  if (!result.ok) {
                                      res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
                                      res->setBody(Error(result.code, result.err));
@@ -147,18 +152,22 @@ bool ContactApiModule::onServerReady() {
                                  res->setBody(Ok(d));
                                  return 0;
                              });
+
+        /*获取未读好友申请数量接口*/
         dispatch->addServlet("/api/v1/contact-apply/unread-num",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
                                  res->setHeader("Content-Type", "application/json");
 
-                                 uint64_t uid = GetUidFromToken(req, res);
-                                 if (uid == 0) {
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
                                      return 0;
                                  }
 
                                  auto result =
-                                     CIM::app::ContactService::GetPendingContactApplyCount(uid);
+                                     CIM::app::ContactService::GetPendingContactApplyCount(uid_result.data);
                                  if (!result.ok) {
                                      res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
                                      res->setBody(Error(result.code, result.err));
@@ -195,17 +204,41 @@ bool ContactApiModule::onServerReady() {
                                  res->setBody(Ok());
                                  return 0;
                              });
-        dispatch->addServlet("/api/v1/contact/delete",
-                             [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
-                                CIM::http::HttpSession::ptr /*session*/) {
-                                 res->setHeader("Content-Type", "application/json");
-                                 res->setBody(Ok());
-                                 return 0;
-                             });
+
+        /*删除联系人接口*/
+        dispatch->addServlet("/api/v1/contact/delete", [](CIM::http::HttpRequest::ptr req,
+                                                          CIM::http::HttpResponse::ptr res,
+                                                          CIM::http::HttpSession::ptr /*session*/) {
+            CIM_LOG_INFO(g_logger) << "/api/v1/contact/delete";
+            res->setHeader("Content-Type", "application/json");
+            uint64_t contact_id;
+            Json::Value body;
+            if (ParseBody(req->getBody(), body)) {
+                contact_id = CIM::JsonUtil::GetUint64(body, "user_id");
+            }
+
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
+                                     return 0;
+                                 }
+
+            /*调用业务逻辑处理删除联系人*/
+            auto result = CIM::app::ContactService::DeleteContact(uid_result.data, contact_id);
+            if (!result.ok) {
+                res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
+                res->setBody(Error(result.code, result.err));
+                return 0;
+            }
+            res->setBody(Ok());
+            return 0;
+        });
+
+        /*获取联系人详情接口*/
         dispatch->addServlet("/api/v1/contact/detail", [](CIM::http::HttpRequest::ptr req,
                                                           CIM::http::HttpResponse::ptr res,
                                                           CIM::http::HttpSession::ptr /*session*/) {
-            CIM_LOG_DEBUG(g_logger) << "/api/v1/contact/detail";
             res->setHeader("Content-Type", "application/json");
 
             uint64_t target_id;
@@ -214,12 +247,14 @@ bool ContactApiModule::onServerReady() {
                 target_id = CIM::JsonUtil::GetUint64(body, "user_id");
             }
 
-            uint64_t owner_id = GetUidFromToken(req, res);
-            if (owner_id == 0) {
-                return 0;
-            }
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
+                                     return 0;
+                                 }
 
-            auto result = CIM::app::ContactService::GetContactDetail(owner_id, target_id);
+            auto result = CIM::app::ContactService::GetContactDetail(uid_result.data, target_id);
             if (!result.ok) {
                 res->setStatus(CIM::http::HttpStatus::NOT_FOUND);
                 res->setBody(Error(result.code, result.err));
@@ -234,7 +269,7 @@ bool ContactApiModule::onServerReady() {
             user["gender"] = result.data.gender;
             user["motto"] = result.data.motto;
             user["email"] = result.data.email;
-            if (owner_id == target_id) {
+            if (uid_result.data == target_id) {
                 user["relation"] = 4;  // 自己
             } else {
                 user["relation"] = result.data.relation;
@@ -245,26 +280,56 @@ bool ContactApiModule::onServerReady() {
             res->setBody(Ok(user));
             return 0;
         });
+
+        /*编辑联系人备注接口*/
         dispatch->addServlet("/api/v1/contact/edit-remark",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
                                  res->setHeader("Content-Type", "application/json");
+
+                                 uint64_t contact_id;
+                                 std::string remark;
+                                 Json::Value body;
+                                 if (ParseBody(req->getBody(), body)) {
+                                     contact_id = CIM::JsonUtil::GetUint64(body, "user_id");
+                                     remark = CIM::JsonUtil::GetString(body, "remark");
+                                 }
+
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
+                                     return 0;
+                                 }
+
+                                 /*调用业务逻辑处理编辑联系人备注*/
+                                 auto result = CIM::app::ContactService::EditContactRemark(
+                                     uid_result.data, contact_id, remark);
+                                 if (!result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
+                                     res->setBody(Error(result.code, result.err));
+                                     return 0;
+                                 }
+
                                  res->setBody(Ok());
                                  return 0;
                              });
+
+        /*获取联系人列表接口*/
         dispatch->addServlet("/api/v1/contact/list",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
-                                 CIM_LOG_DEBUG(g_logger) << "/api/v1/contact/list";
                                  res->setHeader("Content-Type", "application/json");
 
-                                 uint64_t uid = GetUidFromToken(req, res);
-                                 if (uid == 0) {
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
                                      return 0;
                                  }
 
                                  /*根据用户 ID 获取用户好友列表*/
-                                 auto contacts = CIM::app::ContactService::ListFriends(uid);
+                                 auto contacts = CIM::app::ContactService::ListFriends(uid_result.data);
                                  if (!contacts.ok) {
                                      res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
                                      res->setBody(Error(contacts.code, contacts.err));
@@ -288,6 +353,8 @@ bool ContactApiModule::onServerReady() {
                                  res->setBody(Ok(d));
                                  return 0;
                              });
+
+        /*获取联系人在线状态接口*/
         dispatch->addServlet("/api/v1/contact/online-status",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
@@ -298,10 +365,10 @@ bool ContactApiModule::onServerReady() {
                                  return 0;
                              });
 
+        /*搜索联系人接口*/
         dispatch->addServlet("/api/v1/contact/search",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
-                                 CIM_LOG_DEBUG(g_logger) << "/api/v1/contact/search";
                                  res->setHeader("Content-Type", "application/json");
 
                                  std::string mobile;

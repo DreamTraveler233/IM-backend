@@ -9,7 +9,7 @@ namespace CIM::dao {
 
 static const char* kDBName = "default";
 
-bool UserLoginLogDAO::Create(const UserLoginLog& log, uint64_t& out_id, std::string* err) {
+bool UserLoginLogDAO::Create(const UserLoginLog& log, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";
@@ -33,7 +33,6 @@ bool UserLoginLogDAO::Create(const UserLoginLog& log, uint64_t& out_id, std::str
         if (err) *err = stmt->getErrStr();
         return false;
     }
-    out_id = static_cast<uint64_t>(stmt->getLastInsertId());
     return true;
 }
 

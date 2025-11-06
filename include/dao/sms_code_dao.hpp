@@ -22,14 +22,14 @@ struct SmsCode {
 class SmsCodeDAO {
    public:
     // 创建新的短信验证码
-    static bool Create(const SmsCode& code, uint64_t& out_id, std::string* err = nullptr);
+    static bool Create(const SmsCode& code, std::string* err = nullptr);
 
     // 根据手机号和验证码验证
     static bool Verify(const std::string& mobile, const std::string& code,
                        const std::string& channel, std::string* err = nullptr);
 
     // 标记验证码为已使用
-    static bool MarkAsUsed(uint64_t id, std::string* err = nullptr);
+    static bool MarkAsUsed(const uint64_t id, std::string* err = nullptr);
 
     // 将过期验证码标记为失效
     static bool MarkExpiredAsInvalid(std::string* err = nullptr);

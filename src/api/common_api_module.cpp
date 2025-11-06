@@ -69,7 +69,7 @@ bool CommonApiModule::onServerReady() {
 
             /* 构造并设置响应体 */
             Json::Value data;
-            data["sms_code"] = result.sms_code.sms_code;
+            data["sms_code"] = result.data.sms_code;
             res->setBody(Ok(data));
             return 0;
         });

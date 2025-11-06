@@ -35,17 +35,28 @@ bool ParseBody(const std::string& body, Json::Value& out) {
     return out.isObject();
 }
 
-std::string SignJwt(const std::string& uid, uint32_t expires_in) {
+TokenResult SignJwt(const std::string& uid, uint32_t expires_in) {
+    TokenResult result;
     auto now = std::chrono::system_clock::now();
     auto exp = now + std::chrono::seconds(expires_in);
-    return jwt::create()
-        .set_type("JWS")
-        .set_issuer(g_jwt_issuer->getValue())
-        .set_issued_at(now)
-        .set_expires_at(exp)
-        .set_subject(uid)
-        .set_payload_claim("uid", jwt::claim(uid))
-        .sign(jwt::algorithm::hs256{g_jwt_secret->getValue()});
+    try {
+        result.data = jwt::create()
+                          .set_type("JWS")
+                          .set_issuer(g_jwt_issuer->getValue())
+                          .set_issued_at(now)
+                          .set_expires_at(exp)
+                          .set_subject(uid)
+                          .set_payload_claim("uid", jwt::claim(uid))
+                          .sign(jwt::algorithm::hs256{g_jwt_secret->getValue()});
+    } catch (const std::exception& e) {
+        CIM_LOG_ERROR(g_logger) << result.err;
+        result.code = 500;
+        result.err = "令牌签名失败！";
+        return result;
+    }
+
+    result.ok = true;
+    return result;
 }
 
 /**
@@ -92,33 +103,35 @@ bool IsJwtExpired(const std::string& token) {
     return false;
 }
 
-uint64_t GetUidFromToken(CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res) {
+UidResult GetUidFromToken(CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res) {
+    UidResult result;
     /*从请求头中提取 Token*/
     std::string header = req->getHeader("Authorization", "");
     std::string token = header.substr(7);
     if (token.empty()) {
-        res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-        res->setBody(Error(401, "未提供访问令牌！"));
-        return 0;
+        result.code = 401;
+        result.err = "未提供访问令牌！";
+        return result;
     }
 
     /*验证 Token 的签名是否有效并提取用户 ID*/
     std::string uid_str;
     if (!VerifyJwt(token, &uid_str)) {
-        res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-        res->setBody(Error(401, "无效的访问令牌！"));
-        return 0;
+        result.code = 401;
+        result.err = "无效的访问令牌！";
+        return result;
     }
 
     /*检查 Token 是否已过期*/
     if (IsJwtExpired(token)) {
-        res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-        res->setBody(Error(401, "访问令牌已过期！"));
-        return 0;
+        result.code = 401;
+        result.err = "访问令牌已过期！";
+        return result;
     }
-    uint64_t uid = std::stoull(uid_str);
 
-    return uid;
+    result.data = std::stoull(uid_str);
+    result.ok = true;
+    return result;
 }
 
 }  // namespace CIM

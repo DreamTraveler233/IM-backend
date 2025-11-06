@@ -7,6 +7,8 @@
 
 namespace CIM::app {
 
+auto g_logger = CIM_LOG_NAME("root");
+
 static auto g_sms_enabled = CIM::Config::Lookup<bool>("sms.enabled", false, "enable sms sending");
 static auto g_sms_provider =
     CIM::Config::Lookup<std::string>("sms.provider", "mock", "sms provider: aliyun/tencent/mock");
@@ -23,39 +25,43 @@ static CIM::Timer::ptr g_invalid_code_cleanup_timer;
 SmsCodeResult CommonService::SendSmsCode(const std::string& mobile, const std::string& channel,
                                          CIM::http::HttpSession::ptr session) {
     SmsCodeResult result;
+    std::string err;
 
     /* 生成6位数字验证码 */
     std::string sms_code = CIM::random_string(6, "0123456789");
     if (sms_code.size() != 6) {
+        result.code = 500;
         result.err = "验证码生成失败";
         return result;
     }
 
     /* 根据配置决定是否发送真实短信 */
     if (g_sms_enabled->getValue()) {
-        std::string send_err;
-        if (!SendRealSms(mobile, sms_code, channel, &send_err)) {
-            result.err = send_err.empty() ? "短信发送失败" : send_err;
+        if (!SendRealSms(mobile, sms_code, channel, &err)) {
+            CIM_LOG_ERROR(g_logger) << "发送短信失败: " << err;
+            result.code = 500;
+            result.err = "短信发送失败";
             return result;
         }
     } else {
         // 模拟模式：仅记录日志
-        CIM_LOG_INFO(CIM_LOG_ROOT()) << "模拟发送短信验证码到 " << mobile << ": " << sms_code;
+        CIM_LOG_INFO(g_logger) << "模拟发送短信验证码到 " << mobile << ": " << sms_code;
     }
 
     /*保存验证码*/
-    CIM::dao::SmsCode code;
-    code.mobile = mobile;
-    code.sms_code = sms_code;
-    code.channel = channel;
-    code.expired_at = TimeUtil::NowToS() + 300;  // 5分钟后过期
-    code.send_ip = session->getRemoteAddressString();
-    code.created_at = TimeUtil::NowToS();
-    if (!CIM::dao::SmsCodeDAO::Create(code, code.id, &result.err)) {
+    result.data.mobile = mobile;
+    result.data.sms_code = sms_code;
+    result.data.channel = channel;
+    result.data.expired_at = TimeUtil::NowToS() + 300;  // 5分钟后过期
+    result.data.send_ip = session->getRemoteAddressString();
+    result.data.created_at = TimeUtil::NowToS();
+    if (!CIM::dao::SmsCodeDAO::Create(result.data, &err)) {
+        CIM_LOG_ERROR(g_logger) << "保存短信验证码失败: " << err;
+        result.code = 500;
+        result.err = "保存验证码失败";
         return result;
     }
 
-    result.sms_code = std::move(code);
     result.ok = true;
     return result;
 }
@@ -65,13 +71,13 @@ SmsCodeResult CommonService::VerifySmsCode(const std::string& mobile, const std:
     // 使用 DAO 层进行原子校验（同时校验未过期与未使用，并标记为已使用）
     SmsCodeResult result;
     std::string err;
+    
     if (!CIM::dao::SmsCodeDAO::Verify(mobile, code, channel, &err)) {
-        // 统一返回提示，优先使用具体错误信息
+        CIM_LOG_WARN(g_logger) << "验证码校验失败: " << err;
+        result.code = 400;
         result.err = "验证码不正确";
-        CIM_LOG_WARN(CIM_LOG_ROOT()) << "验证码校验失败: " << err;
         return result;
     }
-
     result.ok = true;
     return result;
 }
@@ -100,7 +106,7 @@ bool CommonService::SendSmsViaAliyun(const std::string& mobile, const std::strin
     // 3. 返回发送结果
 
     // 临时实现：模拟成功
-    CIM_LOG_INFO(CIM_LOG_ROOT()) << "阿里云短信发送到 " << mobile << ": " << sms_code;
+    CIM_LOG_INFO(g_logger) << "阿里云短信发送到 " << mobile << ": " << sms_code;
     return true;
 }
 
@@ -108,7 +114,7 @@ bool CommonService::SendSmsViaAliyun(const std::string& mobile, const std::strin
 bool CommonService::SendSmsViaTencent(const std::string& mobile, const std::string& sms_code,
                                       const std::string& channel, std::string* err) {
     // TODO: 实现腾讯云短信发送逻辑
-    CIM_LOG_INFO(CIM_LOG_ROOT()) << "腾讯云短信发送到 " << mobile << ": " << sms_code;
+    CIM_LOG_INFO(g_logger) << "腾讯云短信发送到 " << mobile << ": " << sms_code;
     return true;
 }
 

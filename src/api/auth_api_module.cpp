@@ -2,8 +2,8 @@
 
 #include <jwt-cpp/jwt.h>
 
-#include "app/auth_service.hpp"
 #include "app/common_service.hpp"
+#include "app/user_service.hpp"
 #include "base/macro.hpp"
 #include "common/common.hpp"
 #include "config/config.hpp"
@@ -55,38 +55,45 @@ bool AuthApiModule::onServerReady() {
             }
 
             /* 鉴权用户 */
-            auto result = CIM::app::AuthService::Authenticate(mobile, password, platform);
-            /*记录登录日志*/
+            auto result = CIM::app::UserService::Authenticate(mobile, password, platform);
+
+            /*只要用户存在，无论鉴权成功还是失败都要记录登录日志*/
             std::string err;
-            if (result.user.id != 0) {
-                if (!CIM::app::AuthService::LogLogin(result, platform, &err)) {
+            if (result.data.id != 0) {
+                auto LogLogin_res = CIM::app::UserService::LogLogin(result, platform);
+                if (!LogLogin_res.ok) {
                     res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
-                    res->setBody(Error(400, "记录登录日志失败！"));
+                    res->setBody(Error(LogLogin_res.code, LogLogin_res.err));
+                    return 0;
+                }
+
+                // 更新在线状态为在线
+                auto goOnline_res = CIM::app::UserService::GoOnline(result.data.id);
+                if (!goOnline_res.ok) {
+                    res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
+                    res->setBody(Error(goOnline_res.code, goOnline_res.err));
                     return 0;
                 }
             }
             if (!result.ok) {
                 res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-                res->setBody(Error(401, result.err));
+                res->setBody(Error(result.code, result.err));
                 return 0;
             }
 
             /* 签发JWT */
-            std::string token;
-            try {
-                token = SignJwt(std::to_string(result.user.id), g_jwt_expires_in->getValue());
-            } catch (const std::exception& e) {
+            auto token_result =
+                SignJwt(std::to_string(result.data.id), g_jwt_expires_in->getValue());
+            if (!token_result.ok) {
                 res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
-                res->setBody(Error(500, "令牌签名失败！"));
+                res->setBody(Error(token_result.code, token_result.err));
                 return 0;
             }
 
-            /*Token持久化*/
-
             /* 构造并设置响应体 */
             Json::Value data;
-            data["type"] = "Bearer";       // token类型，固定值Bearer
-            data["access_token"] = token;  // 访问令牌
+            data["type"] = "Bearer";                   // token类型，固定值Bearer
+            data["access_token"] = token_result.data;  // 访问令牌
             data["expires_in"] =
                 static_cast<Json::UInt>(g_jwt_expires_in->getValue());  // 过期时间(秒)
             res->setBody(Ok(data));
@@ -117,42 +124,50 @@ bool AuthApiModule::onServerReady() {
                 CIM::app::CommonService::VerifySmsCode(mobile, sms_code, "register");
             if (!verifyResult.ok) {
                 res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
-                res->setBody(Error(400, verifyResult.err));
+                res->setBody(Error(verifyResult.code, verifyResult.err));
                 return 0;
             }
 
             /* 注册用户 */
-            auto result = CIM::app::AuthService::Register(nickname, mobile, password, platform);
+            auto result = CIM::app::UserService::Register(nickname, mobile, password, platform);
 
-            /*记录登录日志*/
+            /*只要创建用户成功就记录登录日志*/
             std::string err;
-            if (result.user.id != 0) {
-                if (!CIM::app::AuthService::LogLogin(result, platform, &err)) {
-                    res->setStatus(CIM::http::HttpStatus::NOT_IMPLEMENTED);
-                    res->setBody(Error(500, "记录登录日志失败！"));
+            if (result.data.id != 0) {
+                auto LogLogin_res = CIM::app::UserService::LogLogin(result, platform);
+                if (!LogLogin_res.ok) {
+                    res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
+                    res->setBody(Error(LogLogin_res.code, "记录登录日志失败！"));
+                    return 0;
+                }
+
+                // 更新在线状态为在线
+                auto goOnline_res = CIM::app::UserService::GoOnline(result.data.id);
+                if (!goOnline_res.ok) {
+                    res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
+                    res->setBody(Error(goOnline_res.code, "更新在线状态失败！"));
                     return 0;
                 }
             }
             if (!result.ok) {
                 res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
-                res->setBody(Error(401, result.err));
+                res->setBody(Error(result.code, result.err));
                 return 0;
             }
 
             /* 签发JWT */
-            std::string token;
-            try {
-                token = SignJwt(std::to_string(result.user.id), g_jwt_expires_in->getValue());
-            } catch (const std::exception& e) {
+            auto token_result =
+                SignJwt(std::to_string(result.data.id), g_jwt_expires_in->getValue());
+            if (!token_result.ok) {
                 res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
-                res->setBody(Error(500, "token sign failed"));
+                res->setBody(Error(token_result.code, token_result.err));
                 return 0;
             }
 
             /* 设置响应体 */
             Json::Value data;
             data["type"] = "Bearer";
-            data["access_token"] = token;
+            data["access_token"] = token_result.data;
             data["expires_in"] = static_cast<Json::UInt>(g_jwt_expires_in->getValue());
             res->setBody(Ok(data));
             return 0;
@@ -180,15 +195,15 @@ bool AuthApiModule::onServerReady() {
                 CIM::app::CommonService::VerifySmsCode(mobile, sms_code, "forget_account");
             if (!verifyResult.ok) {
                 res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
-                res->setBody(Error(400, verifyResult.err));
+                res->setBody(Error(verifyResult.code, verifyResult.err));
                 return 0;
             }
 
             /* 找回密码 */
-            auto authResult = CIM::app::AuthService::Forget(mobile, password);
-            if (!authResult.ok) {
+            auto forgetResult = CIM::app::UserService::Forget(mobile, password);
+            if (!forgetResult.ok) {
                 res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
-                res->setBody(Error(400, authResult.err));
+                res->setBody(Error(forgetResult.code, forgetResult.err));
                 return 0;
             }
 

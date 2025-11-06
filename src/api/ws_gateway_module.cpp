@@ -5,6 +5,7 @@
 #include <atomic>
 #include <unordered_map>
 
+#include "app/user_service.hpp"
 #include "base/macro.hpp"
 #include "common/common.hpp"
 #include "http/ws_server.hpp"
@@ -135,8 +136,30 @@ bool WsGatewayModule::onServerReady() {
         // 2.2 连接关闭回调：移除会话表
         auto on_close = [](CIM::http::HttpRequest::ptr /*header*/,
                            CIM::http::WSSession::ptr session) -> int32_t {
-            CIM::RWMutex::WriteLock lock(s_ws_mutex);
-            s_ws_conns.erase((void*)session.get());
+            // 获取连接上下文
+            ConnCtx ctx;
+            {
+                CIM::RWMutex::ReadLock lock(s_ws_mutex);
+                auto it = s_ws_conns.find((void*)session.get());
+                if (it != s_ws_conns.end()) {
+                    ctx = it->second;
+                }
+            }
+
+            // 执行下线操作：更新用户在线状态为离线
+            if (ctx.uid != 0) {
+                auto offline_result = CIM::app::UserService::Offline(ctx.uid);
+                if (!offline_result.ok) {
+                    CIM_LOG_ERROR(g_logger)
+                        << "Offline failed for uid=" << ctx.uid << ", err=" << offline_result.err;
+                }
+            }
+
+            // 移除会话表
+            {
+                CIM::RWMutex::WriteLock lock(s_ws_mutex);
+                s_ws_conns.erase((void*)session.get());
+            }
             return 0;
         };
 

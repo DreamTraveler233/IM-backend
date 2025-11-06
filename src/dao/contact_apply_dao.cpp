@@ -7,7 +7,7 @@ namespace CIM::dao {
 
 static const char* kDBName = "default";
 
-bool ContactApplyDAO::Create(const ContactApply& a, uint64_t& out_id, std::string* err) {
+bool ContactApplyDAO::Create(const ContactApply& a, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";
@@ -40,7 +40,6 @@ bool ContactApplyDAO::Create(const ContactApply& a, uint64_t& out_id, std::strin
         if (err) *err = stmt->getErrStr();
         return false;
     }
-    out_id = static_cast<uint64_t>(stmt->getLastInsertId());
     return true;
 }
 
@@ -67,7 +66,7 @@ bool ContactApplyDAO::GetPendingCountById(uint64_t id, uint64_t& out_count, std:
     return true;
 }
 
-bool ContactApplyDAO::GetItemById(uint64_t id, std::vector<ContactApplyItem>& out,
+bool ContactApplyDAO::GetItemById(const uint64_t id, std::vector<ContactApplyItem>& out,
                                   std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
@@ -106,7 +105,8 @@ bool ContactApplyDAO::GetItemById(uint64_t id, std::vector<ContactApplyItem>& ou
     return true;
 }
 
-bool ContactApplyDAO::AgreeApply(uint64_t apply_id, const std::string& remark, std::string* err) {
+bool ContactApplyDAO::AgreeApply(const uint64_t apply_id, const std::string& remark,
+                                 std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";
@@ -129,7 +129,8 @@ bool ContactApplyDAO::AgreeApply(uint64_t apply_id, const std::string& remark, s
     return true;
 }
 
-bool ContactApplyDAO::RejectApply(uint64_t apply_id, const std::string& remark, std::string* err) {
+bool ContactApplyDAO::RejectApply(const uint64_t apply_id, const std::string& remark,
+                                  std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";
@@ -152,7 +153,7 @@ bool ContactApplyDAO::RejectApply(uint64_t apply_id, const std::string& remark, 
     return true;
 }
 
-bool ContactApplyDAO::GetDetailById(uint64_t apply_id, ContactApply& out, std::string* err) {
+bool ContactApplyDAO::GetDetailById(const uint64_t apply_id, ContactApply& out, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "no mysql connection";

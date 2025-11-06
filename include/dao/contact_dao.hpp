@@ -45,13 +45,28 @@ struct ContactItem {
 class ContactDAO {
    public:
     // 获取好友列表
-    static bool ListByUser(uint64_t user_id, std::vector<ContactItem>& out,
+    static bool ListByUser(const uint64_t user_id, std::vector<ContactItem>& out,
                            std::string* err = nullptr);
-    // 根据用户ID获取联系人详情
-    static bool GetByOwnerAndTarget(uint64_t owner_id, uint64_t target_id, ContactDetails& out,
-                                    std::string* err = nullptr);
+    // 根据用户ID和目标ID获取联系人详情
+    static bool GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id,
+                                    ContactDetails& out, std::string* err = nullptr);
+    // 根据用户ID和目标ID获取联系人详情
+    static bool GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id,
+                                    Contact& out, std::string* err = nullptr);
     // 创建联系人记录
     static bool Create(const Contact& c, std::string* err = nullptr);
+
+    // 添加好友（非首次）
+    static bool AddFriend(const uint64_t user_id, const uint64_t contact_id,
+                          std::string* err = nullptr);
+
+    // 修改联系人备注
+    static bool EditRemark(const uint64_t user_id, const uint64_t contact_id,
+                           const std::string& remark, std::string* err = nullptr);
+
+    // 删除联系人
+    static bool Delete(const uint64_t user_id, const uint64_t contact_id,
+                       std::string* err = nullptr);
 };
 
 }  // namespace CIM::dao

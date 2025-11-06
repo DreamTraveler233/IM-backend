@@ -34,29 +34,31 @@ bool UserApiModule::onServerReady() {
                                  /*设置响应头*/
                                  res->setHeader("Content-Type", "application/json");
 
-                                 uint64_t uid = GetUidFromToken(req, res);
-                                 if (uid == 0) {
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
                                      return 0;
                                  }
 
                                  /*根据用户 ID 加载用户信息*/
-                                 auto result = CIM::app::UserService::LoadUser(uid);
+                                 auto result = CIM::app::UserService::LoadUserInfo(uid_result.data);
                                  if (!result.ok) {
                                      res->setStatus(CIM::http::HttpStatus::NOT_FOUND);
-                                     res->setBody(Error(404, result.err));
+                                     res->setBody(Error(result.code, result.err));
                                      return 0;
                                  }
 
                                  /*构造响应并返回*/
                                  Json::Value data;
-                                 data["id"] = result.user.id;              // 用户ID
-                                 data["mobile"] = result.user.mobile;      // 手机号
-                                 data["nickname"] = result.user.nickname;  // 昵称
-                                 data["email"] = result.user.email;        // 邮箱
-                                 data["gender"] = result.user.gender;      // 性别
-                                 data["motto"] = result.user.motto;        // 个性签名
-                                 data["avatar"] = result.user.avatar;      // 头像URL
-                                 data["birthday"] = result.user.birthday;  // 生日
+                                 data["id"] = result.data.id;              // 用户ID
+                                 data["mobile"] = result.data.mobile;      // 手机号
+                                 data["nickname"] = result.data.nickname;  // 昵称
+                                 data["email"] = result.data.email;        // 邮箱
+                                 data["gender"] = result.data.gender;      // 性别
+                                 data["motto"] = result.data.motto;        // 个性签名
+                                 data["avatar"] = result.data.avatar;      // 头像URL
+                                 data["birthday"] = result.data.birthday;  // 生日
                                  res->setBody(Ok(data));
                                  return 0;
                              });
@@ -68,8 +70,10 @@ bool UserApiModule::onServerReady() {
                                  CIM_LOG_DEBUG(g_logger) << "/api/v1/user/detail-update";
                                  res->setHeader("Content-Type", "application/json");
 
-                                 uint64_t uid = GetUidFromToken(req, res);
-                                 if (uid == 0) {
+                                 auto uid_result = GetUidFromToken(req, res);
+                                 if (!uid_result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                                     res->setBody(Error(uid_result.code, uid_result.err));
                                      return 0;
                                  }
 
@@ -86,8 +90,9 @@ bool UserApiModule::onServerReady() {
                                  }
 
                                  /*更新用户信息*/
-                                 if (!CIM::app::UserService::UpdateUserInfo(
-                                         uid, nickname, avatar, motto, gender, birthday)) {
+                                 auto result = CIM::app::UserService::UpdateUserInfo(
+                                     uid_result.data, nickname, avatar, motto, gender, birthday);
+                                 if (!result.ok) {
                                      res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
                                      res->setBody(Error(500, "更新用户信息失败！"));
                                      return 0;

@@ -18,7 +18,7 @@ struct UserLoginLog {
 class UserLoginLogDAO {
    public:
     // 记录登录日志
-    static bool Create(const UserLoginLog& log, uint64_t& out_id, std::string* err = nullptr);
+    static bool Create(const UserLoginLog& log, std::string* err = nullptr);
 };
 
 }  // namespace CIM::dao

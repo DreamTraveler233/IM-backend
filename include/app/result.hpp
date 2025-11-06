@@ -13,7 +13,7 @@ struct Result {
     T data;           // 成功时的载荷
 };
 
-using VoidResult = Result<int>;  // data 不用时可用占位
+using ResultVoid = Result<int>;  // data 不用时可用占位
 }  // namespace CIM::app
 
 #endif  // __CIM_APP_RESULT_HPP__

@@ -74,6 +74,40 @@ bool ContactDAO::GetByOwnerAndTarget(uint64_t owner_id, uint64_t target_id, Cont
     return false;
 }
 
+bool ContactDAO::GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id,
+                                     Contact& out, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql = "SELECT * FROM contacts WHERE user_id = ? AND contact_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, owner_id);
+    stmt->bindUint64(2, target_id);
+    auto res = stmt->query();
+    if (!res) {
+        if (err) *err = "query failed";
+        return false;
+    }
+    if (res->next()) {
+        out.id = res->getUint64(0);
+        out.user_id = res->getUint64(1);
+        out.contact_id = res->getUint64(2);
+        out.relation = res->getUint8(3);
+        out.group_id = res->getUint64(4);
+        out.remark = res->getString(5);
+        out.created_at = res->getTime(6);
+        out.updated_at = res->getTime(7);
+        out.status = res->getUint8(8);
+        return true;
+    }
+    return false;
+}
 bool ContactDAO::Create(const Contact& c, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
@@ -102,7 +136,78 @@ bool ContactDAO::Create(const Contact& c, std::string* err) {
     stmt->bindUint8(7, c.status);
     int rc = stmt->execute();
     if (rc != 0) {
-        if (err) *err = stmt->getErrStr();
+        if (err) *err = "execute failed";
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::AddFriend(const uint64_t user_id, const uint64_t contact_id, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql =
+        "UPDATE contacts SET relation = 2, status = 1 WHERE user_id = ? AND contact_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, user_id);
+    stmt->bindUint64(2, contact_id);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::EditRemark(const uint64_t user_id, const uint64_t contact_id,
+                            const std::string& remark, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql = "UPDATE contacts SET remark = ? WHERE user_id = ? AND contact_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindString(1, remark);
+    stmt->bindUint64(2, user_id);
+    stmt->bindUint64(3, contact_id);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::Delete(const uint64_t user_id, const uint64_t contact_id, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql =
+        "UPDATE contacts SET remark = '', relation = 1, status = 2 WHERE user_id = ? AND contact_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, user_id);
+    stmt->bindUint64(2, contact_id);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
+        ;
         return false;
     }
     return true;
