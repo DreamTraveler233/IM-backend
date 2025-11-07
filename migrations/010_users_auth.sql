@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   birthday          DATE,                                         -- 生日，可选
   gender            TINYINT UNSIGNED NOT NULL DEFAULT 0,          -- 性别：0- 1男 2女 3未知
   online_status     VARCHAR(1) NOT NULL DEFAULT 'N',              -- 在线状态：N:离线 Y:在线
-  last_online_at    DATETIME,                                     -- 最后在线时间
+  last_online_at    DATETIME,                                      -- 最后在线时间
   is_robot          TINYINT UNSIGNED NOT NULL DEFAULT 0,          -- 是否机器人：0否 1是
   is_qiye           TINYINT UNSIGNED NOT NULL DEFAULT 0,          -- 是否企业用户：0否 1是
   status            TINYINT UNSIGNED NOT NULL DEFAULT 1,          -- 账户状态：1正常 2禁用
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   theme_mode           VARCHAR(16) NOT NULL DEFAULT 'light',       -- 主题模式：light亮色 dark暗色
   theme_bag_img        VARCHAR(255),                               -- 主题背景图片URL
   theme_color          VARCHAR(16) NOT NULL DEFAULT '#409eff',     -- 主题颜色，十六进制
-  notify_cue_tone      VARCHAR(64) NOT NULL DEFAULT 'default',     -- 通知提示音
+  notify_cue_tone      VARCHAR(64) NOT NULL DEFAULT 'default',     -- 通知提示音：Y是 N否
   keyboard_event_notify VARCHAR(8) NOT NULL DEFAULT 'N',           -- 键盘事件通知：Y是 N否
   created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, -- 创建时间
   updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间

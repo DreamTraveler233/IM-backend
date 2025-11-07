@@ -264,4 +264,64 @@ bool UserDAO::UpdateOfflineStatus(const uint64_t id, std::string* err) {
     return true;
 }
 
+bool UserDAO::GetOnlineStatus(const uint64_t id, std::string& out_status, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "no mysql connection";
+        return false;
+    }
+    const char* sql = "SELECT online_status FROM users WHERE id = ? LIMIT 1";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, id);
+    auto res = stmt->query();
+    if (!res) {
+        if (err) *err = "query failed";
+        return false;
+    }
+    if (!res->next()) {
+        if (err) *err = "user not found";
+        return false;
+    }
+    out_status = res->getString(0);
+    return true;
+}
+
+bool UserDAO::GetUserInfoSimple(const uint64_t uid, UserInfo& out, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "no mysql connection";
+        return false;
+    }
+    const char* sql =
+        "SELECT id, nickname, avatar, motto, gender, is_qiye, mobile, email FROM users WHERE id = "
+        "? LIMIT 1";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, uid);
+    auto res = stmt->query();
+    if (!res) {
+        if (err) *err = "query failed";
+        return false;
+    }
+    if (!res->next()) {
+        if (err) *err = "user not found";
+        return false;
+    }
+    out.uid = res->isNull(0) ? 0 : res->getUint64(0);
+    out.nickname = res->isNull(1) ? std::string() : res->getString(1);
+    out.avatar = res->isNull(2) ? std::string() : res->getString(2);
+    out.motto = res->isNull(3) ? std::string() : res->getString(3);
+    out.gender = res->isNull(4) ? 0 : res->getUint32(4);
+    out.is_qiye = res->isNull(5) ? false : (res->getUint32(5) != 0);
+    out.mobile = res->isNull(6) ? std::string() : res->getString(6);
+    out.email = res->isNull(7) ? std::string() : res->getString(7);
+    return true;
+}
 }  // namespace CIM::dao

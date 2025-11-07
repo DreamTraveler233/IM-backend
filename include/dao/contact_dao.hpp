@@ -16,7 +16,7 @@ struct Contact {
     std::string remark;          // 备注
     std::time_t created_at = 0;  // 创建时间
     std::time_t updated_at = 0;  // 更新时间
-    uint8_t status = 1;          // 状态，1正常，0删除
+    uint8_t status = 1;          // 状态，1正常，2删除
 };
 
 struct ContactDetails {
@@ -51,10 +51,13 @@ class ContactDAO {
     static bool GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id,
                                     ContactDetails& out, std::string* err = nullptr);
     // 根据用户ID和目标ID获取联系人详情
-    static bool GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id,
-                                    Contact& out, std::string* err = nullptr);
+    static bool GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id, Contact& out,
+                                    std::string* err = nullptr);
     // 创建联系人记录
     static bool Create(const Contact& c, std::string* err = nullptr);
+
+    // 插入或更新联系人记录（如果已存在则更新 status/relation/remark/group_id）
+    static bool Upsert(const Contact& c, std::string* err = nullptr);
 
     // 添加好友（非首次）
     static bool AddFriend(const uint64_t user_id, const uint64_t contact_id,
@@ -67,6 +70,22 @@ class ContactDAO {
     // 删除联系人
     static bool Delete(const uint64_t user_id, const uint64_t contact_id,
                        std::string* err = nullptr);
+
+    // 修改联系人分组
+    static bool ChangeGroup(const uint64_t user_id, const uint64_t contact_id,
+                            const uint64_t group_id, std::string* err = nullptr);
+
+    // 获取好友原先的分组
+    static bool GetOldGroupId(const uint64_t user_id, const uint64_t contact_id,
+                              uint64_t& out_group_id, std::string* err = nullptr);
+
+    // 当删除好友时，将该好友从所属分组移出（group_id 设为 0）
+    static bool RemoveFromGroup(const uint64_t user_id, const uint64_t contact_id,
+                                std::string* err = nullptr);
+
+    // 当分组删除时，将在该分组的所有好友移出（group_id 设为 0）
+    static bool RemoveFromGroupByGroupId(const uint64_t user_id, const uint64_t group_id,
+                                         std::string* err = nullptr);
 };
 
 }  // namespace CIM::dao

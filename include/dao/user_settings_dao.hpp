@@ -17,16 +17,27 @@ struct UserSettings {
     std::time_t updated_at = 0;               // 更新时间
 };
 
+struct ConfigInfo {
+    std::string theme_mode;             // 主题模式：light亮色 dark暗色
+    std::string theme_bag_img;          // 聊天背景图片
+    std::string theme_color;            // 主题主色调，十六进制
+    std::string notify_cue_tone;        // 通知提示音
+    std::string keyboard_event_notify;  // 键盘事件通知：Y是 N否
+};
+
 class UserSettingsDAO {
    public:
     // 创建或更新用户设置
     static bool Upsert(const UserSettings& settings, std::string* err = nullptr);
 
     // 根据用户ID获取设置
-    static bool GetByUserId(uint64_t user_id, UserSettings& out);
+    static bool GetByUserId(uint64_t user_id, UserSettings& out, std::string* err = nullptr);
 
     // 删除用户设置
     static bool DeleteByUserId(uint64_t user_id, std::string* err = nullptr);
+
+    // 获取用户配置详情
+    static bool GetConfigInfo(uint64_t user_id, ConfigInfo& out, std::string* err = nullptr);
 };
 
 }  // namespace CIM::dao

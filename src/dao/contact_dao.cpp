@@ -29,7 +29,7 @@ bool ContactDAO::ListByUser(uint64_t user_id, std::vector<ContactItem>& out, std
     }
     while (res->next()) {
         ContactItem item;
-        item.group_id = res->getUint64(0);
+        item.group_id = res->isNull(0) ? 0 : res->getUint64(0);
         item.remark = res->isNull(1) ? std::string() : res->getString(1);
         item.user_id = res->getUint64(2);
         item.nickname = res->isNull(3) ? std::string() : res->getString(3);
@@ -99,10 +99,10 @@ bool ContactDAO::GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t tar
         out.user_id = res->getUint64(1);
         out.contact_id = res->getUint64(2);
         out.relation = res->getUint8(3);
-        out.group_id = res->getUint64(4);
-        out.remark = res->getString(5);
-        out.created_at = res->getTime(6);
-        out.updated_at = res->getTime(7);
+        out.group_id = res->isNull(4) ? 0 : res->getUint64(4);
+        out.remark = res->isNull(5) ? std::string() : res->getString(5);
+        out.created_at = res->isNull(6) ? 0 : res->getTime(6);
+        out.updated_at = res->isNull(7) ? 0 : res->getTime(7);
         out.status = res->getUint8(8);
         return true;
     }
@@ -118,6 +118,47 @@ bool ContactDAO::Create(const Contact& c, std::string* err) {
         "INSERT INTO contacts (user_id, contact_id, relation, group_id, remark, created_at, "
         "status) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, c.user_id);
+    stmt->bindUint64(2, c.contact_id);
+    stmt->bindUint8(3, c.relation);
+    if (c.group_id == 0) {
+        stmt->bindNull(4);
+    } else {
+        stmt->bindUint64(4, c.group_id);
+    }
+    stmt->bindString(5, c.remark);
+    stmt->bindTime(6, c.created_at);
+    stmt->bindUint8(7, c.status);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::Upsert(const Contact& c, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    // 使用 ON DUPLICATE KEY 实现有则更新、无则插入的逻辑
+    const char* sql =
+        "INSERT INTO contacts (user_id, contact_id, relation, group_id, remark, created_at, "
+        "status) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?) "
+        "ON DUPLICATE KEY UPDATE "
+        "relation = VALUES(relation), "
+        "group_id = VALUES(group_id), "
+        "remark = VALUES(remark), "
+        "status = VALUES(status), "
+        "updated_at = NOW()";
     auto stmt = db->prepare(sql);
     if (!stmt) {
         if (err) *err = "prepare failed";
@@ -196,7 +237,8 @@ bool ContactDAO::Delete(const uint64_t user_id, const uint64_t contact_id, std::
         return false;
     }
     const char* sql =
-        "UPDATE contacts SET remark = '', relation = 1, status = 2 WHERE user_id = ? AND contact_id = ?";
+        "UPDATE contacts SET remark = '', relation = 1, status = 2 WHERE user_id = ? AND "
+        "contact_id = ?";
     auto stmt = db->prepare(sql);
     if (!stmt) {
         if (err) *err = "prepare failed";
@@ -208,6 +250,103 @@ bool ContactDAO::Delete(const uint64_t user_id, const uint64_t contact_id, std::
     if (rc != 0) {
         if (err) *err = "execute failed";
         ;
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::ChangeGroup(const uint64_t user_id, const uint64_t contact_id,
+                             const uint64_t group_id, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql = "UPDATE contacts SET group_id = ? WHERE contact_id = ? AND user_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, group_id);
+    stmt->bindUint64(2, contact_id);
+    stmt->bindUint64(3, user_id);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::GetOldGroupId(const uint64_t user_id, const uint64_t contact_id,
+                               uint64_t& out_group_id, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql = "SELECT group_id FROM contacts WHERE contact_id = ? AND user_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, contact_id);
+    stmt->bindUint64(2, user_id);
+    auto res = stmt->query();
+    if (!res) {
+        if (err) *err = "query failed";
+        return false;
+    }
+    if (res->next()) {
+        out_group_id = res->isNull(0) ? 0 : res->getUint64(0);
+        return true;
+    }
+    return false;
+}
+
+bool ContactDAO::RemoveFromGroup(const uint64_t user_id, const uint64_t contact_id,
+                                 std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql = "UPDATE contacts SET group_id = NULL WHERE user_id = ? AND contact_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, user_id);
+    stmt->bindUint64(2, contact_id);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
+        return false;
+    }
+    return true;
+}
+
+bool ContactDAO::RemoveFromGroupByGroupId(const uint64_t user_id, const uint64_t group_id,
+                                          std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
+    if (!db) {
+        if (err) *err = "db error";
+        return false;
+    }
+    const char* sql = "UPDATE contacts SET group_id = NULL WHERE user_id = ? AND group_id = ?";
+    auto stmt = db->prepare(sql);
+    if (!stmt) {
+        if (err) *err = "prepare failed";
+        return false;
+    }
+    stmt->bindUint64(1, user_id);
+    stmt->bindUint64(2, group_id);
+    int rc = stmt->execute();
+    if (rc != 0) {
+        if (err) *err = "execute failed";
         return false;
     }
     return true;

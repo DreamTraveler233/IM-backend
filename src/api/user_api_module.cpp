@@ -130,14 +130,92 @@ bool UserApiModule::onServerReady() {
                                  return 0;
                              });
 
+        dispatch->addServlet("/api/v1/user/setting/save", [](CIM::http::HttpRequest::ptr req,
+                                                             CIM::http::HttpResponse::ptr res,
+                                                             CIM::http::HttpSession::ptr) {
+            res->setHeader("Content-Type", "application/json");
+
+            std::string theme_mode, theme_bag_img, theme_color, notify_cue_tone,
+                keyboard_event_notify;
+            Json::Value body;
+            if (CIM::ParseBody(req->getBody(), body)) {
+                theme_mode = CIM::JsonUtil::GetString(body, "theme_mode");
+                theme_bag_img = CIM::JsonUtil::GetString(body, "theme_bag_img");
+                theme_color = CIM::JsonUtil::GetString(body, "theme_color");
+                notify_cue_tone = CIM::JsonUtil::GetString(body, "notify_cue_tone");
+                keyboard_event_notify = CIM::JsonUtil::GetString(body, "keyboard_event_notify");
+            }
+
+            auto uid_result = GetUidFromToken(req, res);
+            if (!uid_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                res->setBody(Error(uid_result.code, uid_result.err));
+                return 0;
+            }
+
+            auto save_result = CIM::app::UserService::SaveConfigInfo(
+                uid_result.data, theme_mode, theme_bag_img, theme_color, notify_cue_tone,
+                keyboard_event_notify);
+            if (!save_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
+                res->setBody(Error(save_result.code, save_result.err));
+                return 0;
+            }
+
+            res->setBody(Ok());
+            return 0;
+        });
+
         /*用户设置接口*/
-        dispatch->addServlet("/api/v1/user/setting",
-                             [](CIM::http::HttpRequest::ptr, CIM::http::HttpResponse::ptr res,
-                                CIM::http::HttpSession::ptr) {
-                                 res->setHeader("Content-Type", "application/json");
-                                 res->setBody(Ok());
-                                 return 0;
-                             });
+        dispatch->addServlet("/api/v1/user/setting", [](CIM::http::HttpRequest::ptr req,
+                                                        CIM::http::HttpResponse::ptr res,
+                                                        CIM::http::HttpSession::ptr) {
+            res->setHeader("Content-Type", "application/json");
+
+            auto uid_result = GetUidFromToken(req, res);
+            if (!uid_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                res->setBody(Error(uid_result.code, uid_result.err));
+                return 0;
+            }
+
+            // 加载用户信息简版
+            auto user_info_result = CIM::app::UserService::LoadUserInfoSimple(uid_result.data);
+            if (!user_info_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::NOT_FOUND);
+                res->setBody(Error(user_info_result.code, user_info_result.err));
+                return 0;
+            }
+
+            // 加载用户设置
+            auto config_info_result = CIM::app::UserService::LoadConfigInfo(uid_result.data);
+            if (!config_info_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::NOT_FOUND);
+                res->setBody(Error(config_info_result.code, config_info_result.err));
+                return 0;
+            }
+
+            Json::Value user_info;
+            user_info["uid"] = user_info_result.data.uid;
+            user_info["nickname"] = user_info_result.data.nickname;
+            user_info["avatar"] = user_info_result.data.avatar;
+            user_info["motto"] = user_info_result.data.motto;
+            user_info["gender"] = user_info_result.data.gender;
+            user_info["is_qiye"] = user_info_result.data.is_qiye;
+            user_info["mobile"] = user_info_result.data.mobile;
+            user_info["email"] = user_info_result.data.email;
+            Json::Value setting;
+            setting["theme_mode"] = config_info_result.data.theme_mode;
+            setting["theme_bag_img"] = config_info_result.data.theme_bag_img;
+            setting["theme_color"] = config_info_result.data.theme_color;
+            setting["notify_cue_tone"] = config_info_result.data.notify_cue_tone;
+            setting["keyboard_event_notify"] = config_info_result.data.keyboard_event_notify;
+            Json::Value data;
+            data["user_info"] = user_info;
+            data["setting"] = setting;
+            res->setBody(Ok(data));
+            return 0;
+        });
     }
 
     CIM_LOG_INFO(g_logger) << "user routes registered";

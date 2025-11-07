@@ -26,6 +26,17 @@ struct User {
     std::time_t updated_at = 0;       // 更新时间
 };
 
+struct UserInfo {
+    uint64_t uid;          // 用户ID
+    std::string nickname;  // 昵称
+    std::string avatar;    // 头像URL
+    std::string motto;     // 个性签名
+    uint32_t gender;       // 性别：0未知 1男 2女
+    bool is_qiye;          // 是否企业用户
+    std::string mobile;    // 手机号
+    std::string email;     // 邮箱
+};
+
 class UserDAO {
    public:
     // 创建新用户
@@ -55,6 +66,13 @@ class UserDAO {
 
     // 用户下线
     static bool UpdateOfflineStatus(const uint64_t id, std::string* err = nullptr);
+
+    // 获取用户在线状态
+    static bool GetOnlineStatus(const uint64_t id, std::string& out_status,
+                                std::string* err = nullptr);
+
+    // 获取用户配置信息
+    static bool GetUserInfoSimple(const uint64_t uid, UserInfo& out, std::string* err = nullptr);
 };
 
 }  // namespace CIM::dao

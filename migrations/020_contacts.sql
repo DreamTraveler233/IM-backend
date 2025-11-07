@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS contact_groups (
 ) ENGINE=InnoDB;
 
 
--- 联系人表：存储每个用户的联系人（好友/黑名单等）
+-- 联系人表：存储每个用户的联系人
 CREATE TABLE IF NOT EXISTS contacts (
   id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, -- 记录ID，自增主键
   user_id        BIGINT UNSIGNED NOT NULL,                   -- 用户ID
@@ -48,5 +48,4 @@ CREATE TABLE IF NOT EXISTS contact_applies (
   KEY idx_contact_apply_applicant (applicant_id, created_at),   -- 申请人+时间索引
   CONSTRAINT fk_contact_apply_applicant FOREIGN KEY (applicant_id) REFERENCES users (id) ON DELETE CASCADE, -- 外键约束
   CONSTRAINT fk_contact_apply_target FOREIGN KEY (target_id) REFERENCES users (id) ON DELETE CASCADE,       -- 外键约束
-  CONSTRAINT fk_contact_apply_handler FOREIGN KEY (handler_id) REFERENCES users (id) ON DELETE SET NULL     -- 外键约束
 ) ENGINE=InnoDB;

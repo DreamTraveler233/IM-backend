@@ -1,10 +1,11 @@
 #include "api/contact_api_module.hpp"
 
 #include "app/contact_service.hpp"
-#include "macro.hpp"
+#include "app/user_service.hpp"
 #include "common/common.hpp"
 #include "http/http_server.hpp"
 #include "http/http_servlet.hpp"
+#include "macro.hpp"
 #include "system/application.hpp"
 #include "util/util.hpp"
 
@@ -128,7 +129,8 @@ bool ContactApiModule::onServerReady() {
                                  }
 
                                  /*获取未处理的好友申请列表*/
-                                 auto result = CIM::app::ContactService::ListContactApplies(uid_result.data);
+                                 auto result =
+                                     CIM::app::ContactService::ListContactApplies(uid_result.data);
                                  if (!result.ok) {
                                      res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
                                      res->setBody(Error(result.code, result.err));
@@ -154,10 +156,121 @@ bool ContactApiModule::onServerReady() {
                              });
 
         /*获取未读好友申请数量接口*/
-        dispatch->addServlet("/api/v1/contact-apply/unread-num",
+        dispatch->addServlet(
+            "/api/v1/contact-apply/unread-num",
+            [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
+               CIM::http::HttpSession::ptr /*session*/) {
+                res->setHeader("Content-Type", "application/json");
+
+                auto uid_result = GetUidFromToken(req, res);
+                if (!uid_result.ok) {
+                    res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                    res->setBody(Error(uid_result.code, uid_result.err));
+                    return 0;
+                }
+
+                auto result =
+                    CIM::app::ContactService::GetPendingContactApplyCount(uid_result.data);
+                if (!result.ok) {
+                    res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
+                    res->setBody(Error(result.code, result.err));
+                    return 0;
+                }
+
+                Json::Value data;
+                data["num"] = result.data;
+                res->setBody(Ok(data));
+                return 0;
+            });
+
+        /*获取联系人分组列表接口*/
+        dispatch->addServlet(
+            "/api/v1/contact-group/list",
+            [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
+               CIM::http::HttpSession::ptr /*session*/) {
+                CIM_LOG_INFO(g_logger) << "/api/v1/contact-group/list";
+                res->setHeader("Content-Type", "application/json");
+
+                auto uid_result = GetUidFromToken(req, res);
+                if (!uid_result.ok) {
+                    res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                    res->setBody(Error(uid_result.code, uid_result.err));
+                    return 0;
+                }
+                /*调用业务逻辑处理获取联系人分组列表*/
+                auto result = CIM::app::ContactService::GetContactGroupLists(uid_result.data);
+                if (!result.ok) {
+                    res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
+                    res->setBody(Error(result.code, result.err));
+                    return 0;
+                }
+
+                Json::Value items;
+                Json::Value data;
+                for (const auto& item : result.data) {
+                    Json::Value jitem;
+                    jitem["id"] = item.id;
+                    jitem["name"] = item.name;
+                    jitem["sort"] = item.sort;
+                    jitem["count"] = item.contact_count;
+                    data.append(jitem);
+                }
+                items["items"] = data;
+                res->setBody(Ok(items));
+                return 0;
+            });
+
+        /*保存联系人分组接口*/
+        dispatch->addServlet(
+            "/api/v1/contact-group/save",
+            [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
+               CIM::http::HttpSession::ptr /*session*/) {
+                CIM_LOG_INFO(g_logger) << "/api/v1/contact-group/save";
+                res->setHeader("Content-Type", "application/json");
+
+                std::vector<std::tuple<uint64_t, uint64_t, std::string>> groupItems;
+                Json::Value body;
+                if (ParseBody(req->getBody(), body)) {
+                    auto items = body["items"];
+                    for (const auto& item : items) {
+                        uint64_t id = JsonUtil::GetUint64(item, "id");
+                        uint64_t sort = JsonUtil::GetUint64(item, "sort");
+                        std::string name = JsonUtil::GetString(item, "name");
+                        groupItems.emplace_back(id, sort, name);
+                    }
+                }
+
+                auto uid_result = GetUidFromToken(req, res);
+                if (!uid_result.ok) {
+                    res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                    res->setBody(Error(uid_result.code, uid_result.err));
+                    return 0;
+                }
+
+                /*调用业务逻辑处理修改联系人分组*/
+                auto result =
+                    CIM::app::ContactService::SaveContactGroup(uid_result.data, groupItems);
+                if (!result.ok) {
+                    res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
+                    res->setBody(Error(result.code, result.err));
+                    return 0;
+                }
+
+                res->setBody(Ok());
+                return 0;
+            });
+
+        dispatch->addServlet("/api/v1/contact/change-group",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
                                  res->setHeader("Content-Type", "application/json");
+
+                                 uint64_t contact_id, group_id;
+                                 Json::Value body;
+                                 if (ParseBody(req->getBody(), body)) {
+                                     contact_id = CIM::JsonUtil::GetUint64(body, "user_id");
+                                     group_id = CIM::JsonUtil::GetUint64(body, "group_id");
+                                 }
 
                                  auto uid_result = GetUidFromToken(req, res);
                                  if (!uid_result.ok) {
@@ -166,41 +279,14 @@ bool ContactApiModule::onServerReady() {
                                      return 0;
                                  }
 
-                                 auto result =
-                                     CIM::app::ContactService::GetPendingContactApplyCount(uid_result.data);
+                                 auto result = CIM::app::ContactService::ChangeContactGroup(
+                                     uid_result.data, contact_id, group_id);
                                  if (!result.ok) {
-                                     res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
+                                     res->setStatus(CIM::http::HttpStatus::BAD_REQUEST);
                                      res->setBody(Error(result.code, result.err));
                                      return 0;
                                  }
 
-                                 Json::Value data;
-                                 data["num"] = result.data;
-                                 res->setBody(Ok(data));
-                                 return 0;
-                             });
-
-        // contact-group
-        dispatch->addServlet("/api/v1/contact-group/list",
-                             [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
-                                CIM::http::HttpSession::ptr /*session*/) {
-                                 res->setHeader("Content-Type", "application/json");
-                                 res->setBody(Ok());
-                                 return 0;
-                             });
-        dispatch->addServlet("/api/v1/contact-group/save",
-                             [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
-                                CIM::http::HttpSession::ptr /*session*/) {
-                                 res->setHeader("Content-Type", "application/json");
-                                 res->setBody(Ok());
-                                 return 0;
-                             });
-
-        // contact
-        dispatch->addServlet("/api/v1/contact/change-group",
-                             [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
-                                CIM::http::HttpSession::ptr /*session*/) {
-                                 res->setHeader("Content-Type", "application/json");
                                  res->setBody(Ok());
                                  return 0;
                              });
@@ -217,12 +303,12 @@ bool ContactApiModule::onServerReady() {
                 contact_id = CIM::JsonUtil::GetUint64(body, "user_id");
             }
 
-                                 auto uid_result = GetUidFromToken(req, res);
-                                 if (!uid_result.ok) {
-                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-                                     res->setBody(Error(uid_result.code, uid_result.err));
-                                     return 0;
-                                 }
+            auto uid_result = GetUidFromToken(req, res);
+            if (!uid_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                res->setBody(Error(uid_result.code, uid_result.err));
+                return 0;
+            }
 
             /*调用业务逻辑处理删除联系人*/
             auto result = CIM::app::ContactService::DeleteContact(uid_result.data, contact_id);
@@ -247,12 +333,12 @@ bool ContactApiModule::onServerReady() {
                 target_id = CIM::JsonUtil::GetUint64(body, "user_id");
             }
 
-                                 auto uid_result = GetUidFromToken(req, res);
-                                 if (!uid_result.ok) {
-                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-                                     res->setBody(Error(uid_result.code, uid_result.err));
-                                     return 0;
-                                 }
+            auto uid_result = GetUidFromToken(req, res);
+            if (!uid_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                res->setBody(Error(uid_result.code, uid_result.err));
+                return 0;
+            }
 
             auto result = CIM::app::ContactService::GetContactDetail(uid_result.data, target_id);
             if (!result.ok) {
@@ -316,52 +402,67 @@ bool ContactApiModule::onServerReady() {
                              });
 
         /*获取联系人列表接口*/
-        dispatch->addServlet("/api/v1/contact/list",
-                             [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
-                                CIM::http::HttpSession::ptr /*session*/) {
-                                 res->setHeader("Content-Type", "application/json");
+        dispatch->addServlet("/api/v1/contact/list", [](CIM::http::HttpRequest::ptr req,
+                                                        CIM::http::HttpResponse::ptr res,
+                                                        CIM::http::HttpSession::ptr /*session*/) {
+            res->setHeader("Content-Type", "application/json");
 
-                                 auto uid_result = GetUidFromToken(req, res);
-                                 if (!uid_result.ok) {
-                                     res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
-                                     res->setBody(Error(uid_result.code, uid_result.err));
-                                     return 0;
-                                 }
+            auto uid_result = GetUidFromToken(req, res);
+            if (!uid_result.ok) {
+                res->setStatus(CIM::http::HttpStatus::UNAUTHORIZED);
+                res->setBody(Error(uid_result.code, uid_result.err));
+                return 0;
+            }
 
-                                 /*根据用户 ID 获取用户好友列表*/
-                                 auto contacts = CIM::app::ContactService::ListFriends(uid_result.data);
-                                 if (!contacts.ok) {
-                                     res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
-                                     res->setBody(Error(contacts.code, contacts.err));
-                                     return 0;
-                                 }
+            /*根据用户 ID 获取用户好友列表*/
+            auto contacts = CIM::app::ContactService::ListFriends(uid_result.data);
+            if (!contacts.ok) {
+                res->setStatus(CIM::http::HttpStatus::INTERNAL_SERVER_ERROR);
+                res->setBody(Error(contacts.code, contacts.err));
+                return 0;
+            }
 
-                                 Json::Value d(Json::objectValue);
-                                 Json::Value items(Json::arrayValue);
-                                 for (const auto& c : contacts.data) {
-                                     Json::Value item(Json::objectValue);
-                                     item["user_id"] = c.user_id;
-                                     item["nickname"] = c.nickname;
-                                     item["gender"] = c.gender;
-                                     item["motto"] = c.motto;
-                                     item["avatar"] = c.avatar;
-                                     item["remark"] = c.remark;
-                                     item["group_id"] = c.group_id;
-                                     items.append(item);
-                                 }
-                                 d["items"] = items;
-                                 res->setBody(Ok(d));
-                                 return 0;
-                             });
+            Json::Value d;
+            Json::Value items;
+            for (const auto& c : contacts.data) {
+                Json::Value item;
+                item["user_id"] = c.user_id;
+                item["nickname"] = c.nickname;
+                item["gender"] = c.gender;
+                item["motto"] = c.motto;
+                item["avatar"] = c.avatar;
+                item["remark"] = c.remark;
+                item["group_id"] = c.group_id;
+                items.append(item);
+            }
+            d["items"] = items;
+            res->setBody(Ok(d));
+            return 0;
+        });
 
         /*获取联系人在线状态接口*/
         dispatch->addServlet("/api/v1/contact/online-status",
                              [](CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res,
                                 CIM::http::HttpSession::ptr /*session*/) {
                                  res->setHeader("Content-Type", "application/json");
-                                 Json::Value d;
-                                 d["list"] = Json::Value(Json::arrayValue);
-                                 res->setBody(Ok(d));
+
+                                 uint64_t contact_id;
+                                 Json::Value body;
+                                 if (ParseBody(req->getBody(), body)) {
+                                     contact_id = CIM::JsonUtil::GetUint64(body, "user_id");
+                                 }
+
+                                 auto result =
+                                     CIM::app::UserService::GetUserOnlineStatus(contact_id);
+                                 if (!result.ok) {
+                                     res->setStatus(CIM::http::HttpStatus::NOT_FOUND);
+                                     res->setBody(Error(result.code, result.err));
+                                     return 0;
+                                 }
+
+                                 Json::Value data;
+                                 data["online_status"] = result.data;
+                                 res->setBody(Ok(data));
                                  return 0;
                              });
 

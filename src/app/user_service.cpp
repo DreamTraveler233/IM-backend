@@ -9,7 +9,7 @@
 namespace CIM::app {
 
 static auto g_logger = CIM_LOG_NAME("root");
-UserResult UserService::LoadUserInfo(uint64_t uid) {
+UserResult UserService::LoadUserInfo(const uint64_t uid) {
     UserResult result;
     std::string err;
     if (!CIM::dao::UserDAO::GetById(uid, result.data, &err)) {
@@ -241,4 +241,79 @@ ResultVoid UserService::Offline(const uint64_t id) {
     result.ok = true;
     return result;
 }
+
+StatusResult UserService::GetUserOnlineStatus(const uint64_t id) {
+    StatusResult result;
+
+    if (!CIM::dao::UserDAO::GetOnlineStatus(id, result.data, &result.err)) {
+        CIM_LOG_ERROR(g_logger) << "GetUserOnlineStatus failed, user_id=" << id
+                                << ", err=" << result.err;
+        result.code = 404;
+        result.err = "用户不存在！";
+        return result;
+    }
+
+    result.ok = true;
+    return result;
+}
+
+ResultVoid UserService::SaveConfigInfo(const uint64_t user_id, const std::string& theme_mode,
+                                       const std::string& theme_bag_img,
+                                       const std::string& theme_color,
+                                       const std::string& notify_cue_tone,
+                                       const std::string& keyboard_event_notify) {
+    ResultVoid result;
+    std::string err;
+
+    CIM::dao::UserSettings new_settings;
+    new_settings.user_id = user_id;
+    new_settings.theme_mode = theme_mode;
+    new_settings.theme_bag_img = theme_bag_img;
+    new_settings.theme_color = theme_color;
+    new_settings.notify_cue_tone = notify_cue_tone;
+    new_settings.keyboard_event_notify = keyboard_event_notify;
+    if (!CIM::dao::UserSettingsDAO::Upsert(new_settings, &err)) {
+        CIM_LOG_ERROR(g_logger) << "Upsert new UserSettings failed, user_id=" << user_id
+                                << ", err=" << err;
+        result.code = 500;
+        result.err = "保存用户设置失败！";
+        return result;
+    }
+    result.ok = true;
+    return result;
+}
+
+ConfigInfoResult UserService::LoadConfigInfo(const uint64_t user_id) {
+    ConfigInfoResult result;
+    std::string err;
+
+    if (!CIM::dao::UserSettingsDAO::GetConfigInfo(user_id, result.data, &err)) {
+        if (!err.empty()) {
+            CIM_LOG_ERROR(g_logger)
+                << "LoadConfigInfo failed, user_id=" << user_id << ", err=" << err;
+            result.code = 500;
+            result.err = "加载用户设置失败！";
+            return result;
+        }
+    }
+
+    result.ok = true;
+    return result;
+}
+
+UserInfoResult UserService::LoadUserInfoSimple(const uint64_t uid) {
+    UserInfoResult result;
+    std::string err;
+
+    if (!CIM::dao::UserDAO::GetUserInfoSimple(uid, result.data, &err)) {
+        CIM_LOG_ERROR(g_logger) << "LoadUserInfoSimple failed, uid=" << uid << ", err=" << err;
+        result.code = 404;
+        result.err = "用户不存在！";
+        return result;
+    }
+
+    result.ok = true;
+    return result;
+}
+
 }  // namespace CIM::app

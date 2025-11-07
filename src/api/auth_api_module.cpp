@@ -40,7 +40,6 @@ bool AuthApiModule::onServerReady() {
         dispatch->addServlet("/api/v1/auth/login", [](CIM::http::HttpRequest::ptr req,
                                                       CIM::http::HttpResponse::ptr res,
                                                       CIM::http::HttpSession::ptr /*session*/) {
-            CIM_LOG_DEBUG(g_logger) << "/api/v1/auth/login";
             /* 设置响应头 */
             res->setHeader("Content-Type", "application/json");
 
@@ -104,7 +103,6 @@ bool AuthApiModule::onServerReady() {
         dispatch->addServlet("/api/v1/auth/register", [](CIM::http::HttpRequest::ptr req,
                                                          CIM::http::HttpResponse::ptr res,
                                                          CIM::http::HttpSession::ptr /*session*/) {
-            CIM_LOG_DEBUG(g_logger) << "/api/v1/auth/register";
             /* 设置响应头 */
             res->setHeader("Content-Type", "application/json");
 
@@ -177,7 +175,6 @@ bool AuthApiModule::onServerReady() {
         dispatch->addServlet("/api/v1/auth/forget", [](CIM::http::HttpRequest::ptr req,
                                                        CIM::http::HttpResponse::ptr res,
                                                        CIM::http::HttpSession::ptr session) {
-            CIM_LOG_DEBUG(g_logger) << "/api/v1/auth/forget";
             /* 设置响应头 */
             res->setHeader("Content-Type", "application/json");
 
