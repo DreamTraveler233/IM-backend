@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __CIM_DAO_USER_DAO_HPP__
+#define __CIM_DAO_USER_DAO_HPP__
 
 #include <cstdint>
 #include <ctime>
@@ -8,22 +9,21 @@
 namespace CIM::dao {
 
 struct User {
-    uint64_t id = 0;                  // 用户ID，自增主键
-    std::string mobile;               // 手机号，唯一，用于登录
-    std::string email;                // 邮箱，可选，唯一，用于找回密码
-    std::string nickname;             // 昵称，显示名称
-    std::string password_hash;        // 密码哈希，使用PBKDF2+盐（盐嵌入其中）
-    std::string avatar;               // 头像URL，可选
-    std::string motto;                // 个性签名，可选
-    std::string birthday;             // 生日，字符串格式"YYYY-MM-DD"
-    uint32_t gender = 0;              // 性别：0未知 1男 2女
-    std::string online_status = "N";  // 在线状态：N:离线,Y:在线
-    std::time_t last_online_at = 0;   // 最后在线时间
-    uint32_t is_robot = 0;            // 是否机器人：0否 1是
-    uint32_t is_qiye = 0;             // 是否企业用户：0否 1是
-    uint32_t status = 1;              // 账户状态：1正常 2禁用
-    std::time_t created_at = 0;       // 创建时间
-    std::time_t updated_at = 0;       // 更新时间
+    uint64_t id = 0;                            // 用户ID（雪花ID/分布式ID）
+    std::string mobile;                         // 手机号（唯一，用于登录/找回）
+    std::optional<std::string> email;           // 邮箱（唯一，可选，用于找回/通知）
+    std::string nickname;                       // 昵称
+    std::optional<std::string> avatar;          // 头像URL，可选
+    std::optional<std::string> motto;           // 个性签名，可选
+    std::optional<std::string> birthday;        // 生日 YYYY-MM-DD，可选
+    uint8_t gender = 0;                         // 性别：0=未知 1=男 2=女
+    std::string online_status = "N";            // 在线状态：N:离线 Y:在线
+    std::optional<std::time_t> last_online_at;  // 最后在线时间，可空
+    uint8_t is_qiye = 0;                        // 是否企业用户：0=否 1=是
+    uint8_t is_robot = 0;                       // 是否机器人账号：0=否 1=是
+    uint8_t is_disabled = 0;                    // 是否禁用：0=否 1=是
+    std::time_t created_at = 0;                 // 创建时间
+    std::time_t updated_at = 0;                 // 更新时间
 };
 
 struct UserInfo {
@@ -80,3 +80,5 @@ class UserDAO {
 };
 
 }  // namespace CIM::dao
+
+#endif  // __CIM_DAO_USER_DAO_HPP__

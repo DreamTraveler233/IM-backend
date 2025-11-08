@@ -106,7 +106,8 @@ bool IsJwtExpired(const std::string& token) {
 
 UidResult GetUidFromToken(CIM::http::HttpRequest::ptr req, CIM::http::HttpResponse::ptr res) {
     UidResult result;
-    /*从请求头中提取 Token*/
+    
+    // 从请求头中提取 Token
     std::string header = req->getHeader("Authorization", "");
     std::string token = header.substr(7);
     if (token.empty()) {
@@ -115,7 +116,7 @@ UidResult GetUidFromToken(CIM::http::HttpRequest::ptr req, CIM::http::HttpRespon
         return result;
     }
 
-    /*验证 Token 的签名是否有效并提取用户 ID*/
+    // 验证 Token 的签名是否有效并提取用户 ID
     std::string uid_str;
     if (!VerifyJwt(token, &uid_str)) {
         result.code = 401;
@@ -123,7 +124,7 @@ UidResult GetUidFromToken(CIM::http::HttpRequest::ptr req, CIM::http::HttpRespon
         return result;
     }
 
-    /*检查 Token 是否已过期*/
+    // 检查 Token 是否已过期
     if (IsJwtExpired(token)) {
         result.code = 401;
         result.err = "访问令牌已过期！";
@@ -141,16 +142,19 @@ PasswordResult DecryptPassword(const std::string& encrypted_password, std::strin
     // Base64 解码
     std::string cipher_bin = CIM::base64decode(encrypted_password);
     if (cipher_bin.empty()) {
+        result.code = 400;
         result.err = "密码解码失败！";
         return result;
     }
     // 私钥解密
     auto cm = CIM::CryptoModule::Get();
     if (!cm || !cm->isReady()) {
+        result.code = 500;
         result.err = "密钥模块未加载！";
         return result;
     }
     if (!cm->PrivateDecrypt(cipher_bin, out_plaintext)) {
+        result.code = 400;
         result.err = "密码解密失败！";
         return result;
     }

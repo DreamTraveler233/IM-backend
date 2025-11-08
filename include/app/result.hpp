@@ -5,7 +5,6 @@
 #include "dao/contact_dao.hpp"
 #include "dao/contact_group_dao.hpp"
 #include "dao/sms_code_dao.hpp"
-#include "dao/talk_sessions_dao.hpp"
 #include "dao/user_dao.hpp"
 #include "dao/user_login_log_dao.hpp"
 #include "dao/user_settings_dao.hpp"
@@ -32,7 +31,6 @@ using ContactDetailsResult = Result<CIM::dao::ContactDetails>;
 using ContactListResult = Result<std::vector<CIM::dao::ContactItem>>;
 using ContactApplyListResult = Result<std::vector<CIM::dao::ContactApplyItem>>;
 using ContactGroupListResult = Result<std::vector<CIM::dao::ContactGroupItem>>;
-using TalkSessionListResult = Result<std::vector<CIM::dao::TalkSessionItem>>;
 
 }  // namespace CIM::app
 

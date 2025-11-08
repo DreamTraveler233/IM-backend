@@ -1,10 +1,11 @@
 #include "app/auth_service.hpp"
 
 #include "common/common.hpp"
-#include "macro.hpp"
-#include "util/util.hpp"
-#include "util/password.hpp"
 #include "crypto_module.hpp"
+#include "dao/user_auth_dao.hpp"
+#include "macro.hpp"
+#include "util/password.hpp"
+#include "util/util.hpp"
 
 namespace CIM::app {
 
@@ -15,7 +16,7 @@ UserResult AuthService::Authenticate(const std::string& mobile, const std::strin
     UserResult result;
     std::string err;
 
-    /*密码解密*/
+    // 密码解密
     std::string decrypted_pwd;
     auto dec_res = CIM::DecryptPassword(password, decrypted_pwd);
     if (!dec_res.ok) {
@@ -24,7 +25,7 @@ UserResult AuthService::Authenticate(const std::string& mobile, const std::strin
         return result;
     }
 
-    /*获取用户信息*/
+    // 获取用户信息
     if (!CIM::dao::UserDAO::GetByMobile(mobile, result.data, &err)) {
         CIM_LOG_ERROR(g_logger) << "Authenticate GetByMobile failed, mobile=" << mobile
                                 << ", err=" << err;
@@ -33,15 +34,26 @@ UserResult AuthService::Authenticate(const std::string& mobile, const std::strin
         return result;
     }
 
-    /*验证密码*/
-    if (!CIM::util::Password::Verify(decrypted_pwd, result.data.password_hash)) {
-        result.err = "手机号或密码错误";
+    // 检查用户是否被禁用
+    if (result.data.is_disabled == 1) {
+        result.code = 403;
+        result.err = "账户被禁用!";
         return result;
     }
 
-    /*检查用户状态*/
-    if (result.data.status != 1) {
-        result.err = "账户被禁用!";
+    // 获取用户认证信息
+    CIM::dao::UserAuth ua;
+    if (!CIM::dao::UserAuthDao::GetByUserId(result.data.id, ua, &err)) {
+        CIM_LOG_ERROR(g_logger) << "Authenticate GetByUserId failed, user_id=" << result.data.id
+                                << ", err=" << err;
+        result.code = 500;
+        result.err = "手机号或密码错误！";
+        return result;
+    }
+
+    // 验证密码
+    if (!CIM::util::Password::Verify(decrypted_pwd, ua.password_hash)) {
+        result.err = "手机号或密码错误";
         return result;
     }
 
@@ -107,17 +119,29 @@ UserResult AuthService::Register(const std::string& nickname, const std::string&
         return result;
     }
 
-    /*创建用户*/
+    // 创建用户
     CIM::dao::User u;
     u.nickname = nickname;
     u.mobile = mobile;
-    u.password_hash = ph;
 
     if (!CIM::dao::UserDAO::Create(u, u.id, &err)) {
         CIM_LOG_ERROR(g_logger) << "Register Create user failed, mobile=" << mobile
                                 << ", err=" << err;
         result.code = 500;
         result.err = "创建用户失败！";
+        return result;
+    }
+
+    // 创建密码认证记录
+    CIM::dao::UserAuth ua;
+    ua.user_id = u.id;
+    ua.password_hash = ph;
+
+    if (!CIM::dao::UserAuthDao::Create(ua, &err)) {
+        CIM_LOG_ERROR(g_logger) << "Register Create user_auth failed, user_id=" << u.id
+                                << ", err=" << err;
+        result.code = 500;
+        result.err = "创建用户认证信息失败！";
         return result;
     }
 

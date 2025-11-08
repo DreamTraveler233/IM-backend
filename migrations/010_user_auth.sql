@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `im_user` (
 CREATE TABLE IF NOT EXISTS `im_user_auth` (
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT '用户ID（im_user.id）',
   `password_hash` VARCHAR(255) NOT NULL COMMENT '密码哈希（bcrypt/argon2等）',
-  `password_algo` VARCHAR(16) NOT NULL DEFAULT 'bcrypt' COMMENT '哈希算法（bcrypt/argon2等）',
+  `password_algo` VARCHAR(255) NOT NULL DEFAULT 'PBKDF2-HMAC-SHA256' COMMENT '哈希算法（bcrypt/argon2等）',
   `password_version` SMALLINT NOT NULL DEFAULT 1 COMMENT '密码版本（升级算法时便于区分）',
   `last_reset_at` DATETIME NULL COMMENT '最近重置时间（找回/修改）',
   `created_at` DATETIME NOT NULL COMMENT '创建时间',

@@ -1,11 +1,8 @@
 #include "dao/user_dao.hpp"
 
 #include "db/mysql.hpp"
-#include "macro.hpp"
 
 namespace CIM::dao {
-
-static auto g_logger = CIM_LOG_NAME("db");
 
 static const char* kDBName = "default";
 
@@ -15,44 +12,43 @@ bool UserDAO::Create(const User& u, uint64_t& out_id, std::string* err) {
         if (err) *err = "no mysql connection";
         return false;
     }
-
     const char* sql =
-        "INSERT INTO users (mobile, email, nickname, password_hash, avatar, motto, birthday, "
-        "gender, online_status, last_online_at, is_robot, is_qiye, status) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        "INSERT INTO im_user (mobile, email, nickname, avatar, motto, birthday, gender, "
+        "online_status, last_online_at, is_qiye, is_robot, is_disabled, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
     auto stmt = db->prepare(sql);
     if (!stmt) {
         if (err) *err = "prepare failed";
         return false;
     }
-    stmt->bindString(1, u.mobile);
-    if (!u.email.empty())
-        stmt->bindString(2, u.email);
+    int idx = 1;
+    stmt->bindString(idx++, u.mobile);
+    if (u.email.has_value())
+        stmt->bindString(idx++, *u.email);
     else
-        stmt->bindNull(2);
-    stmt->bindString(3, u.nickname);
-    stmt->bindString(4, u.password_hash);
-    if (!u.avatar.empty())
-        stmt->bindString(5, u.avatar);
+        stmt->bindNull(idx++);
+    stmt->bindString(idx++, u.nickname);
+    if (u.avatar.has_value())
+        stmt->bindString(idx++, *u.avatar);
     else
-        stmt->bindNull(5);
-    if (!u.motto.empty())
-        stmt->bindString(6, u.motto);
+        stmt->bindNull(idx++);
+    if (u.motto.has_value())
+        stmt->bindString(idx++, *u.motto);
     else
-        stmt->bindNull(6);
-    if (!u.birthday.empty())
-        stmt->bindString(7, u.birthday);
+        stmt->bindNull(idx++);
+    if (u.birthday.has_value())
+        stmt->bindString(idx++, *u.birthday);
     else
-        stmt->bindNull(7);
-    stmt->bindInt32(8, u.gender);
-    stmt->bindString(9, u.online_status);
-    if (u.last_online_at != 0)
-        stmt->bindTime(10, u.last_online_at);
+        stmt->bindNull(idx++);
+    stmt->bindInt32(idx++, u.gender);
+    stmt->bindString(idx++, u.online_status);
+    if (u.last_online_at.has_value())
+        stmt->bindTime(idx++, *u.last_online_at);
     else
-        stmt->bindNull(10);
-    stmt->bindInt32(11, u.is_robot);
-    stmt->bindInt32(12, u.is_qiye);
-    stmt->bindInt32(13, u.status);
+        stmt->bindNull(idx++);
+    stmt->bindInt32(idx++, u.is_qiye);
+    stmt->bindInt32(idx++, u.is_robot);
+    stmt->bindInt32(idx++, u.is_disabled);
 
     if (stmt->execute() != 0) {
         if (err) *err = "execute failed";
@@ -69,9 +65,11 @@ bool UserDAO::GetByMobile(const std::string& mobile, User& out, std::string* err
         return false;
     }
     const char* sql =
-        "SELECT id, mobile, email, nickname, password_hash, avatar, motto, DATE_FORMAT(birthday, "
-        "'%Y-%m-%d') as birthday, gender, online_status, last_online_at, is_robot, is_qiye, "
-        "status, created_at, updated_at FROM users WHERE mobile = ? LIMIT 1";
+        "SELECT id, mobile, email, nickname, avatar, motto, DATE_FORMAT(birthday, '%Y-%m-%d') as "
+        "birthday, "
+        "gender, online_status, last_online_at, is_qiye, is_robot, is_disabled, created_at, "
+        "updated_at "
+        "FROM im_user WHERE mobile = ? LIMIT 1";
     auto stmt = db->prepare(sql);
     if (!stmt) {
         if (err) *err = "prepare failed";
@@ -87,22 +85,23 @@ bool UserDAO::GetByMobile(const std::string& mobile, User& out, std::string* err
         if (err) *err = "user not found";
         return false;
     }
-    out.id = static_cast<uint64_t>(res->getUint64(0));
-    out.mobile = res->getString(1);
-    out.email = res->isNull(2) ? std::string() : res->getString(2);
-    out.nickname = res->getString(3);
-    out.password_hash = res->getString(4);
-    out.avatar = res->isNull(5) ? std::string() : res->getString(5);
-    out.motto = res->isNull(6) ? std::string() : res->getString(6);
-    out.birthday = res->isNull(7) ? std::string() : res->getString(7);
-    out.gender = static_cast<uint32_t>(res->getInt32(8));
-    out.online_status = res->isNull(9) ? "N" : res->getString(9);
-    out.last_online_at = res->isNull(10) ? 0 : res->getTime(10);
-    out.is_robot = res->isNull(11) ? 0 : res->getInt32(11);
-    out.is_qiye = res->isNull(12) ? 0 : res->getInt32(12);
-    out.status = res->isNull(13) ? 1 : res->getInt32(13);
-    out.created_at = res->getTime(14);
-    out.updated_at = res->getTime(15);
+    int idx = 0;
+    out.id = static_cast<uint64_t>(res->getUint64(idx++));
+    out.mobile = res->getString(idx++);
+    out.email = res->isNull(idx++) ? std::nullopt : std::make_optional(res->getString(idx++));
+    out.nickname = res->getString(idx++);
+    out.avatar = res->isNull(idx++) ? std::nullopt : std::make_optional(res->getString(idx++));
+    out.motto = res->isNull(idx++) ? std::nullopt : std::make_optional(res->getString(idx++));
+    out.birthday = res->isNull(idx++) ? std::nullopt : std::make_optional(res->getString(idx++));
+    out.gender = static_cast<uint8_t>(res->getInt32(idx++));
+    out.online_status = res->isNull(idx++) ? "N" : res->getString(idx++);
+    out.last_online_at =
+        res->isNull(idx++) ? std::nullopt : std::make_optional(res->getTime(idx++));
+    out.is_qiye = res->isNull(idx++) ? 0 : res->getInt32(idx++);
+    out.is_robot = res->isNull(idx++) ? 0 : res->getInt32(idx++);
+    out.is_disabled = res->isNull(idx++) ? 0 : res->getInt32(idx++);
+    out.created_at = res->getTime(idx++);
+    out.updated_at = res->getTime(idx++);
     return true;
 }
 

@@ -31,7 +31,7 @@ endif()
 
 # ==================== 编译选项 ====================
 # 设置 C++ 标准
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 根据构建类型设置不同的编译选项
