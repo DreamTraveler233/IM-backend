@@ -44,8 +44,6 @@ bool OrganizeApiModule::onServerReady() {
                                  return 0;
                              });
     }
-
-    CIM_LOG_INFO(g_logger) << "organize routes registered";
     return true;
 }
 

@@ -63,7 +63,12 @@ namespace CIM
     template <class T>
     const char *TypeToName()
     {
-        static const char *s_name = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
+        // 确保永远不返回空指针，避免在构造 std::string 或输出时触发 undefined behavior
+        static const char *s_name = []() -> const char * {
+            int status = 0;
+            char *demangled = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status);
+            return demangled ? demangled : typeid(T).name();
+        }();
         return s_name;
     }
 

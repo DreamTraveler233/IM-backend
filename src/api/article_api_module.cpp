@@ -1,11 +1,11 @@
 #include "api/article_api_module.hpp"
 
 #include "base/macro.hpp"
+#include "common/common.hpp"
 #include "http/http_server.hpp"
 #include "http/http_servlet.hpp"
 #include "system/application.hpp"
 #include "util/util.hpp"
-#include "common/common.hpp"
 
 namespace CIM::api {
 static auto g_logger = CIM_LOG_NAME("root");
@@ -165,8 +165,6 @@ bool ArticleApiModule::onServerReady() {
                                  return 0;
                              });
     }
-
-    CIM_LOG_INFO(g_logger) << "article routes registered";
     return true;
 }
 

@@ -511,8 +511,6 @@ bool ContactApiModule::onServerReady() {
                                  return 0;
                              });
     }
-
-    CIM_LOG_INFO(g_logger) << "contact routes registered";
     return true;
 }
 

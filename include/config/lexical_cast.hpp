@@ -9,6 +9,8 @@
 #include <set>
 #include <unordered_set>
 #include <yaml-cpp/yaml.h>
+#include <algorithm>
+#include <cctype>
 
 namespace CIM
 {
@@ -28,6 +30,30 @@ namespace CIM
         T operator()(const F &from) const
         {
             return boost::lexical_cast<T>(from);
+        }
+    };
+
+    // 专门处理字符串到 bool 的转换，支持多种常见写法
+    template <>
+    class LexicalCast<std::string, bool>
+    {
+    public:
+        bool operator()(const std::string &v) const
+        {
+            // 去除首尾空白并转小写
+            auto begin = v.begin();
+            auto end = v.end();
+            while (begin != end && std::isspace(static_cast<unsigned char>(*begin))) ++begin;
+            while (begin != end && std::isspace(static_cast<unsigned char>(*(end - 1)))) --end;
+            std::string s(begin, end);
+            std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+            if (s == "1" || s == "true" || s == "yes" || s == "on")
+                return true;
+            if (s == "0" || s == "false" || s == "no" || s == "off")
+                return false;
+            // 回退到 boost 的默认行为（可能抛异常）
+            return boost::lexical_cast<bool>(v);
         }
     };
 

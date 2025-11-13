@@ -228,11 +228,7 @@ bool AuthApiModule::onServerReady() {
                 res->setBody(Ok());
                 return 0;
             });
-
-        CIM_LOG_INFO(g_logger) << "auth routes registered";
-        return true;
     }
-
     return true;
 }
 

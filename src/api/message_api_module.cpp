@@ -67,8 +67,6 @@ bool MessageApiModule::onServerReady() {
                                  return 0;
                              });
     }
-
-    CIM_LOG_INFO(g_logger) << "message routes registered";
     return true;
 }
 

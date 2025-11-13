@@ -52,8 +52,6 @@ bool EmoticonApiModule::onServerReady() {
                 return 0;
             });
     }
-
-    CIM_LOG_INFO(g_logger) << "emoticon routes registered";
     return true;
 }
 

@@ -1,4 +1,4 @@
--- 050_talk.sql
+  -- 050_talk.sql
 -- 会话（talk）相关表：会话主表 / 用户会话视图 / 会话序列
 
 -- 会话主实体：唯一标识一个会话（单聊=两人唯一，群聊=群唯一）
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS `im_talk_session` (
 
 -- 会话序列表（可选）：维护 talk 的最新 sequence，便于并发安全自增
 CREATE TABLE IF NOT EXISTS `im_talk_sequence` (
-  `talk_id` BIGINT UNSIGNED NOT NULL COMMENT 'im_talk.id',  -- 这里也要改为 BIGINT UNSIGNED
+  `talk_id` BIGINT UNSIGNED NOT NULL COMMENT 'im_talk.id',
   `last_seq` BIGINT NOT NULL DEFAULT 0 COMMENT '当前会话内最大序号',
   `updated_at` DATETIME NOT NULL COMMENT '更新时间',
   `created_at` DATETIME NOT NULL COMMENT '创建时间',

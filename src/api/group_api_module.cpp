@@ -267,8 +267,6 @@ bool GroupApiModule::onServerReady() {
             return 0;
         });
     }
-
-    CIM_LOG_INFO(g_logger) << "group routes registered";
     return true;
 }
 

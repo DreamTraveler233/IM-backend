@@ -89,8 +89,6 @@ bool CommonApiModule::onServerReady() {
                 return 0;
             });
     }
-
-    CIM_LOG_INFO(g_logger) << "common routes registered";
     return true;
 }
 

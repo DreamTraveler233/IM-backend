@@ -51,6 +51,10 @@ class UserDAO {
     // 根据用户ID获取用户信息
     static bool GetById(const uint64_t id, User& out, std::string* err = nullptr);
 
+    // 根据用户ID获取用户信息
+    static bool GetById(const std::shared_ptr<CIM::MySQL>& db, const uint64_t id, User& out,
+                        std::string* err = nullptr);
+
     // 更新用户信息（昵称、头像、签名等）
     static bool UpdateUserInfo(const uint64_t id, const std::string& nickname,
                                const std::string& avatar, const std::string& motto,

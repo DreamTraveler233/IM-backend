@@ -56,6 +56,11 @@ class ContactDAO {
     static bool GetByOwnerAndTarget(const uint64_t owner_id, const uint64_t target_id,
                                     ContactDetails& out, std::string* err = nullptr);
 
+    // 根据用户ID和目标ID获取联系人详情(使用已有的 MySQL 连接)
+    static bool GetByOwnerAndTargetWithConn(const std::shared_ptr<CIM::MySQL>& db,
+                                            const uint64_t owner_id, const uint64_t target_id,
+                                            ContactDetails& out, std::string* err = nullptr);
+
     // 使用已有的 MySQL 连接执行 Upsert，便于包裹事务
     static bool UpsertWithConn(const std::shared_ptr<CIM::MySQL>& db, const Contact& c,
                                std::string* err = nullptr);
@@ -70,8 +75,8 @@ class ContactDAO {
 
     // 修改联系人分组
     static bool ChangeGroupWithConn(const std::shared_ptr<CIM::MySQL>& db, const uint64_t user_id,
-                                     const uint64_t contact_id, const uint64_t group_id,
-                                     std::string* err = nullptr);
+                                    const uint64_t contact_id, const uint64_t group_id,
+                                    std::string* err = nullptr);
 
     // 获取好友原先的分组
     static bool GetOldGroupIdWithConn(const std::shared_ptr<CIM::MySQL>& db, const uint64_t user_id,
@@ -79,8 +84,9 @@ class ContactDAO {
                                       std::string* err = nullptr);
 
     // 当删除好友时，将该好友从所属分组移出（group_id 设为 0）
-    static bool RemoveFromGroupWithConn(const std::shared_ptr<CIM::MySQL>& db, const uint64_t user_id,
-                                         const uint64_t contact_id, std::string* err = nullptr);
+    static bool RemoveFromGroupWithConn(const std::shared_ptr<CIM::MySQL>& db,
+                                        const uint64_t user_id, const uint64_t contact_id,
+                                        std::string* err = nullptr);
 
     // 当分组删除时，将在该分组的所有好友移出（group_id 设为 0）
     static bool RemoveFromGroupByGroupIdWithConn(const std::shared_ptr<CIM::MySQL>& db,

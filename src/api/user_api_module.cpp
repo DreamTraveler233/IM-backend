@@ -269,8 +269,6 @@ bool UserApiModule::onServerReady() {
             return 0;
         });
     }
-
-    CIM_LOG_INFO(g_logger) << "user routes registered";
     return true;
 }
 

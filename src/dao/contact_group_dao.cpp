@@ -55,9 +55,9 @@ bool ContactGroupDAO::ListByUserId(const uint64_t user_id, std::vector<ContactGr
         return false;
     }
     while (res->next()) {
-        ContactGroupItem g;
-        g.id = res->getUint64(0);
-        g.name = res->getString(1);
+    ContactGroupItem g;
+    g.id = res->getUint64(0);
+    g.name = res->isNull(1) ? std::string() : res->getString(1);
         g.contact_count = res->getUint32(2);
         g.sort = res->getUint32(3);
         outs.push_back(std::move(g));
@@ -87,9 +87,9 @@ bool ContactGroupDAO::ListByUserIdWithConn(const std::shared_ptr<CIM::MySQL>& db
         return false;
     }
     while (res->next()) {
-        ContactGroupItem g;
-        g.id = res->getUint64(0);
-        g.name = res->getString(1);
+    ContactGroupItem g;
+    g.id = res->getUint64(0);
+    g.name = res->isNull(1) ? std::string() : res->getString(1);
         g.contact_count = res->getUint32(2);
         g.sort = res->getUint32(3);
         outs.push_back(std::move(g));

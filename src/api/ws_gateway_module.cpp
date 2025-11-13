@@ -210,8 +210,6 @@ bool WsGatewayModule::onServerReady() {
         dispatch->addGlobServlet("/wss/*", on_message, on_connect, on_close);
     }
 
-    // 3. 日志记录路由注册完成
-    CIM_LOG_INFO(g_logger) << "ws routes registered";
     return true;
 }
 

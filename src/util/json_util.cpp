@@ -1,14 +1,11 @@
 #include "json_util.hpp"
+
 #include "util.hpp"
 
-namespace CIM
-{
-    bool JsonUtil::NeedEscape(const std::string &v)
-    {
-        for (auto &c : v)
-        {
-            switch (c)
-            {
+namespace CIM {
+bool JsonUtil::NeedEscape(const std::string& v) {
+    for (auto& c : v) {
+        switch (c) {
             case '\f':
             case '\t':
             case '\r':
@@ -19,18 +16,15 @@ namespace CIM
                 return true;
             default:
                 break;
-            }
         }
-        return false;
     }
+    return false;
+}
 
-    std::string JsonUtil::Escape(const std::string &v)
-    {
-        size_t size = 0;
-        for (auto &c : v)
-        {
-            switch (c)
-            {
+std::string JsonUtil::Escape(const std::string& v) {
+    size_t size = 0;
+    for (auto& c : v) {
+        switch (c) {
             case '\f':
             case '\t':
             case '\r':
@@ -43,19 +37,16 @@ namespace CIM
             default:
                 size += 1;
                 break;
-            }
         }
-        if (size == v.size())
-        {
-            return v;
-        }
+    }
+    if (size == v.size()) {
+        return v;
+    }
 
-        std::string rt;
-        rt.resize(size);
-        for (auto &c : v)
-        {
-            switch (c)
-            {
+    std::string rt;
+    rt.resize(size);
+    for (auto& c : v) {
+        switch (c) {
             case '\f':
                 rt.append("\\f");
                 break;
@@ -80,125 +71,155 @@ namespace CIM
             default:
                 rt.append(1, c);
                 break;
-            }
         }
-        return rt;
     }
-
-    std::string JsonUtil::GetString(const Json::Value &json, const std::string &name, const std::string &default_value)
-    {
-        if (!json.isMember(name))
-        {
-            return default_value;
-        }
-        auto &v = json[name];
-        if (v.isString())
-        {
-            return v.asString();
-        }
-        return default_value;
-    }
-
-    double JsonUtil::GetDouble(const Json::Value &json, const std::string &name, double default_value)
-    {
-        if (!json.isMember(name))
-        {
-            return default_value;
-        }
-        auto &v = json[name];
-        if (v.isDouble())
-        {
-            return v.asDouble();
-        }
-        else if (v.isString())
-        {
-            return TypeUtil::Atof(v.asString());
-        }
-        return default_value;
-    }
-
-    int32_t JsonUtil::GetInt32(const Json::Value &json, const std::string &name, int32_t default_value)
-    {
-        if (!json.isMember(name))
-        {
-            return default_value;
-        }
-        auto &v = json[name];
-        if (v.isInt())
-        {
-            return v.asInt();
-        }
-        else if (v.isString())
-        {
-            return TypeUtil::Atoi(v.asString());
-        }
-        return default_value;
-    }
-
-    uint32_t JsonUtil::GetUint32(const Json::Value &json, const std::string &name, uint32_t default_value)
-    {
-        if (!json.isMember(name))
-        {
-            return default_value;
-        }
-        auto &v = json[name];
-        if (v.isUInt())
-        {
-            return v.asUInt();
-        }
-        else if (v.isString())
-        {
-            return TypeUtil::Atoi(v.asString());
-        }
-        return default_value;
-    }
-
-    int64_t JsonUtil::GetInt64(const Json::Value &json, const std::string &name, int64_t default_value)
-    {
-        if (!json.isMember(name))
-        {
-            return default_value;
-        }
-        auto &v = json[name];
-        if (v.isInt64())
-        {
-            return v.asInt64();
-        }
-        else if (v.isString())
-        {
-            return TypeUtil::Atoi(v.asString());
-        }
-        return default_value;
-    }
-
-    uint64_t JsonUtil::GetUint64(const Json::Value &json, const std::string &name, uint64_t default_value)
-    {
-        if (!json.isMember(name))
-        {
-            return default_value;
-        }
-        auto &v = json[name];
-        if (v.isUInt64())
-        {
-            return v.asUInt64();
-        }
-        else if (v.isString())
-        {
-            return TypeUtil::Atoi(v.asString());
-        }
-        return default_value;
-    }
-
-    bool JsonUtil::FromString(Json::Value &json, const std::string &v)
-    {
-        Json::Reader reader;
-        return reader.parse(v, json);
-    }
-
-    std::string JsonUtil::ToString(const Json::Value &json)
-    {
-        Json::FastWriter w;
-        return w.write(json);
-    }
-
+    return rt;
 }
+
+std::string JsonUtil::GetString(const Json::Value& json, const std::string& name,
+                                const std::string& default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isString()) {
+        return v.asString();
+    }
+    return default_value;
+}
+
+double JsonUtil::GetDouble(const Json::Value& json, const std::string& name, double default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isDouble()) {
+        return v.asDouble();
+    } else if (v.isString()) {
+        return TypeUtil::Atof(v.asString());
+    }
+    return default_value;
+}
+
+int32_t JsonUtil::GetInt32(const Json::Value& json, const std::string& name,
+                           int32_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isInt()) {
+        return v.asInt();
+    } else if (v.isString()) {
+        return TypeUtil::Atoi(v.asString());
+    }
+    return default_value;
+}
+
+uint32_t JsonUtil::GetUint32(const Json::Value& json, const std::string& name,
+                             uint32_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isUInt()) {
+        return v.asUInt();
+    } else if (v.isString()) {
+        return TypeUtil::Atoi(v.asString());
+    }
+    return default_value;
+}
+
+int64_t JsonUtil::GetInt64(const Json::Value& json, const std::string& name,
+                           int64_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isInt64()) {
+        return v.asInt64();
+    } else if (v.isString()) {
+        return TypeUtil::Atoi(v.asString());
+    }
+    return default_value;
+}
+
+uint64_t JsonUtil::GetUint64(const Json::Value& json, const std::string& name,
+                             uint64_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isUInt64()) {
+        return v.asUInt64();
+    } else if (v.isString()) {
+        return TypeUtil::Atoi(v.asString());
+    }
+    return default_value;
+}
+
+int16_t JsonUtil::GetInt16(const Json::Value& json, const std::string& name,
+                           int16_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isInt()) {
+        return static_cast<int16_t>(v.asInt());
+    } else if (v.isString()) {
+        return static_cast<int16_t>(TypeUtil::Atoi(v.asString()));
+    }
+    return default_value;
+}
+
+uint16_t JsonUtil::GetUint16(const Json::Value& json, const std::string& name,
+                             uint16_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isUInt()) {
+        return static_cast<uint16_t>(v.asUInt());
+    } else if (v.isString()) {
+        return static_cast<uint16_t>(TypeUtil::Atoi(v.asString()));
+    }
+    return default_value;
+}
+
+int8_t JsonUtil::GetInt8(const Json::Value& json, const std::string& name, int8_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isInt()) {
+        return static_cast<int8_t>(v.asInt());
+    } else if (v.isString()) {
+        return static_cast<int8_t>(TypeUtil::Atoi(v.asString()));
+    }
+    return default_value;
+}
+
+uint8_t JsonUtil::GetUint8(const Json::Value& json, const std::string& name,
+                           uint8_t default_value) {
+    if (!json.isMember(name)) {
+        return default_value;
+    }
+    auto& v = json[name];
+    if (v.isUInt()) {
+        return static_cast<uint8_t>(v.asUInt());
+    } else if (v.isString()) {
+        return static_cast<uint8_t>(TypeUtil::Atoi(v.asString()));
+    }
+    return default_value;
+}
+
+bool JsonUtil::FromString(Json::Value& json, const std::string& v) {
+    Json::Reader reader;
+    return reader.parse(v, json);
+}
+
+std::string JsonUtil::ToString(const Json::Value& json) {
+    Json::FastWriter w;
+    return w.write(json);
+}
+
+}  // namespace CIM

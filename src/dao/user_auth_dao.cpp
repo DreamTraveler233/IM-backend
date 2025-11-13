@@ -58,13 +58,13 @@ bool UserAuthDao::GetByUserId(const uint64_t user_id, UserAuth& out, std::string
     }
 
     out.user_id = res->getUint64(0);
-    out.password_hash = res->getString(1);
-    out.password_algo = res->isNull(2) ? "PBKDF2-HMAC-SHA256" : res->getString(2);
+    out.password_hash = res->isNull(1) ? std::string() : res->getString(1);
+    out.password_algo = res->isNull(2) ? std::string("PBKDF2-HMAC-SHA256") : res->getString(2);
     out.password_version = res->isNull(3) ? 1 : res->getInt16(3);
     out.last_reset_at = res->isNull(4) ? 0 : res->getTime(4);
     out.created_at = res->getTime(5);
     out.updated_at = res->getTime(6);
-    
+
     return true;
 }
 

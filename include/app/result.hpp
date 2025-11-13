@@ -9,6 +9,7 @@
 #include "dao/user_dao.hpp"
 #include "dao/user_login_log_dao.hpp"
 #include "dao/user_settings_dao.hpp"
+#include "dao/talk_session_dao.hpp"
 
 namespace CIM::app {
 
@@ -28,6 +29,7 @@ using SmsCodeResult = Result<CIM::dao::SmsCode>;
 using UserInfoResult = Result<CIM::dao::UserInfo>;
 using ConfigInfoResult = Result<CIM::dao::ConfigInfo>;
 using ContactGroupResult = Result<CIM::dao::ContactGroup>;
+using TalkSessionResult = Result<CIM::dao::TalkSessionItem>;
 using ContactDetailsResult = Result<CIM::dao::ContactDetails>;
 using ContactListResult = Result<std::vector<CIM::dao::ContactItem>>;
 using TalkSessionListResult = Result<std::vector<CIM::dao::TalkSessionItem>>;

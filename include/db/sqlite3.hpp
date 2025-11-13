@@ -319,19 +319,6 @@ namespace CIM
         }                                                                               \
     };
 
-        // template<size_t N, typename... Tail>
-        // struct SQLite3Binder<N, const char(&)[], Tail...> {
-        //     static int Bind(SQLite3Stmt::ptr stmt
-        //                     , const char value[]
-        //                     , const Tail&... tail) {
-        //         int rt = stmt->bind(N, (const char*)value);
-        //         if(rt != SQLITE_OK) {
-        //             return rt;
-        //         }
-        //         return SQLite3Binder<N + 1, Tail...>::Bind(stmt, tail...);
-        //     }
-        // };
-
         XX(char *, char *const);
         XX(const char *, char *const);
         XX(std::string, std::string);
