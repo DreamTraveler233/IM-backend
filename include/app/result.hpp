@@ -1,15 +1,16 @@
 #ifndef __CIM_APP_RESULT_HPP__
 #define __CIM_APP_RESULT_HPP__
 
-#include "util/id_worker.hpp"
 #include "dao/contact_apply_dao.hpp"
 #include "dao/contact_dao.hpp"
 #include "dao/contact_group_dao.hpp"
+#include "dao/message_dao.hpp"
 #include "dao/sms_code_dao.hpp"
+#include "dao/talk_session_dao.hpp"
 #include "dao/user_dao.hpp"
 #include "dao/user_login_log_dao.hpp"
 #include "dao/user_settings_dao.hpp"
-#include "dao/talk_session_dao.hpp"
+#include "util/id_worker.hpp"
 
 namespace CIM::app {
 
@@ -31,7 +32,9 @@ using ConfigInfoResult = Result<CIM::dao::ConfigInfo>;
 using ContactGroupResult = Result<CIM::dao::ContactGroup>;
 using TalkSessionResult = Result<CIM::dao::TalkSessionItem>;
 using ContactDetailsResult = Result<CIM::dao::ContactDetails>;
+using MessageRecordPageResult = Result<CIM::dao::MessagePage>;
 using ContactListResult = Result<std::vector<CIM::dao::ContactItem>>;
+using MessageRecordListResult = Result<std::vector<CIM::dao::MessageRecord>>;
 using TalkSessionListResult = Result<std::vector<CIM::dao::TalkSessionItem>>;
 using ContactApplyListResult = Result<std::vector<CIM::dao::ContactApplyItem>>;
 using ContactGroupListResult = Result<std::vector<CIM::dao::ContactGroupItem>>;

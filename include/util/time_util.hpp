@@ -57,7 +57,7 @@ namespace CIM
          * @param format 格式字符串，如 "%Y-%m-%d %H:%M:%S"
          * @return std::string 格式化后的时间字符串
          */
-        static std::string TimeToStr(uint64_t timestamp = time(0), const std::string &format = "%Y-%m-%d %H:%M:%S");
+        static std::string TimeToStr(time_t timestamp = time(0), const std::string &format = "%Y-%m-%d %H:%M:%S");
 
         static time_t StrToTime(const char* str, const char* format = "%Y-%m-%d %H:%M:%S");
     };

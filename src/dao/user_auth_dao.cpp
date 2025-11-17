@@ -4,7 +4,7 @@
 
 namespace CIM::dao {
 
-static const char* kDBName = "default";
+static constexpr const char* kDBName = "default";
 
 bool UserAuthDao::Create(const std::shared_ptr<CIM::MySQL>& db, const UserAuth& ua,
                          std::string* err) {

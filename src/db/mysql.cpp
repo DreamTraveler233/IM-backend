@@ -623,9 +623,20 @@ MySQLStmtRes::ptr MySQLStmtRes::Create(std::shared_ptr<MySQLStmt> stmt) {
             XX(MYSQL_TYPE_DATE, MYSQL_TIME);
             XX(MYSQL_TYPE_TIME, MYSQL_TIME);
 #undef XX
-            default:
-                rt->m_datas[i].alloc(fields[i].length);
+            default: {
+                // 对于字符串/文本/二进制等可变长类型，MySQL 会在元数据中给出“最大可能长度”，
+                // 比如 LONGTEXT 可能返回 4GB 的长度。如果直接按该长度分配，将导致巨额内存申请(OOM)。
+                // 这里对每列的缓冲区长度做一个上限裁剪，避免空结果或小结果时不必要的超大分配。
+                // 注意：若真实数据长度超过缓冲区，MySQL 将返回截断标记，当前实现会得到截断后的值。
+                // 如需无截断获取，应改为按列分块提取(mysql_stmt_fetch_column)。
+                size_t max_len = fields[i].length;
+                const size_t kCap = 64 * 1024;  // 64KB 上限，防止为 LONGTEXT 分配过大内存
+                if (max_len == 0 || max_len > kCap) {
+                    max_len = kCap;
+                }
+                rt->m_datas[i].alloc(max_len);
                 break;
+            }
         }
 
         rt->m_binds[i].buffer_type = rt->m_datas[i].type;

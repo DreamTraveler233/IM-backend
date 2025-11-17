@@ -5,7 +5,7 @@
 
 namespace CIM::dao {
 
-static const char* kDBName = "default";
+static constexpr const char* kDBName = "default";
 
 bool ContactApplyDAO::AgreeApplyWithConn(const std::shared_ptr<CIM::MySQL>& db,
                                          const uint64_t user_id, const uint64_t apply_id,

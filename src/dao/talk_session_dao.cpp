@@ -4,7 +4,8 @@
 #include "util/time_util.hpp"
 
 namespace CIM::dao {
-static const char* kDBName = "default";
+    
+static constexpr const char* kDBName = "default";
 
 bool TalkSessionDAO::getSessionListByUserId(const uint64_t user_id,
                                             std::vector<TalkSessionItem>& out, std::string* err) {

@@ -7,7 +7,7 @@
 
 namespace CIM::dao {
 
-static const char* kDBName = "default";
+static constexpr const char* kDBName = "default";
 
 bool SmsCodeDAO::Create(const SmsCode& code, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);

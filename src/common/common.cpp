@@ -110,7 +110,15 @@ UidResult GetUidFromToken(CIM::http::HttpRequest::ptr req, CIM::http::HttpRespon
 
     // 从请求头中提取 Token
     std::string header = req->getHeader("Authorization", "");
-    std::string token = header.substr(7);
+    std::string token;
+    // 兼容 "Bearer <token>" 格式；严格校验前缀与长度，避免 substr 越界
+    const std::string kBearer = "Bearer ";
+    if (!header.empty() && header.rfind(kBearer, 0) == 0 && header.size() > kBearer.size()) {
+        token = header.substr(kBearer.size());
+    } else if (!header.empty() && header.find(' ') == std::string::npos) {
+        // 兼容直接传裸 token 的情况（无前缀）
+        token = header;
+    }
     if (token.empty()) {
         result.code = 401;
         result.err = "未提供访问令牌！";

@@ -3,7 +3,8 @@
 #include "db/mysql.hpp"
 
 namespace CIM::dao {
-constexpr const char* kDBName = "default";
+    
+static constexpr const char* kDBName = "default";
 
 bool ContactDAO::ListByUser(uint64_t user_id, std::vector<ContactItem>& out, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);

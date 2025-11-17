@@ -63,7 +63,7 @@ namespace CIM
         return mktime(&t);
     }
 
-    std::string TimeUtil::TimeToStr(uint64_t timestamp, const std::string &format)
+    std::string TimeUtil::TimeToStr(time_t timestamp, const std::string &format)
     {
         struct tm tm;
         time_t t = timestamp;

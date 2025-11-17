@@ -4,7 +4,7 @@
 
 namespace CIM::dao {
 
-static const char* kDBName = "default";
+static constexpr const char* kDBName = "default";
 
 bool UserLoginLogDAO::Create(const UserLoginLog& log, std::string* err) {
     auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);

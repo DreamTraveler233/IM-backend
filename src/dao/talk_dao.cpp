@@ -4,6 +4,8 @@
 
 namespace CIM::dao {
 
+static constexpr const char* kDBName = "default";
+
 namespace {
 inline void order_pair(uint64_t a, uint64_t b, uint64_t& mn, uint64_t& mx) {
     if (a <= b) {
@@ -66,8 +68,9 @@ bool TalkDao::findOrCreateGroupTalk(const std::shared_ptr<CIM::MySQL>& db, uint6
     return true;
 }
 
-bool TalkDao::getSingleTalkId(const std::shared_ptr<CIM::MySQL>& db, uint64_t uid1, uint64_t uid2,
-                              uint64_t& out_talk_id, std::string* err) {
+bool TalkDao::getSingleTalkId(const uint64_t uid1, const uint64_t uid2, uint64_t& out_talk_id,
+                              std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "get mysql connection failed";
         return false;
@@ -97,8 +100,8 @@ bool TalkDao::getSingleTalkId(const std::shared_ptr<CIM::MySQL>& db, uint64_t ui
     return true;
 }
 
-bool TalkDao::getGroupTalkId(const std::shared_ptr<CIM::MySQL>& db, uint64_t group_id,
-                             uint64_t& out_talk_id, std::string* err) {
+bool TalkDao::getGroupTalkId(const uint64_t group_id, uint64_t& out_talk_id, std::string* err) {
+    auto db = CIM::MySQLMgr::GetInstance()->get(kDBName);
     if (!db) {
         if (err) *err = "get mysql connection failed";
         return false;
@@ -117,6 +120,7 @@ bool TalkDao::getGroupTalkId(const std::shared_ptr<CIM::MySQL>& db, uint64_t gro
         return false;
     }
     if (!res->next()) {
+        // 不存在不视为错误，返回 false；由调用方决定是否创建
         return false;
     }
     out_talk_id = res->getUint64(0);

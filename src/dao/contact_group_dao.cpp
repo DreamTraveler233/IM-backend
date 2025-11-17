@@ -4,7 +4,7 @@
 
 namespace CIM::dao {
 
-static const char* kDBName = "default";
+static constexpr const char* kDBName = "default";
 
 bool ContactGroupDAO::CreateWithConn(const std::shared_ptr<CIM::MySQL>& db, const ContactGroup& g,
                                      uint64_t& out_id, std::string* err) {
