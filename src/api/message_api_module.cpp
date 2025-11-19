@@ -350,6 +350,13 @@ bool MessageApiModule::onServerReady() {
                 if (payload.isMember("text")) {
                     content_text = CIM::JsonUtil::GetString(payload, "text");
                 }
+
+                // 服务器端也禁止发送空白消息
+                if (CIM::StringUtil::Trim(content_text, " \t\n\r").empty()) {
+                    res->setStatus(ToHttpStatus(400));
+                    res->setBody(Error(400, "消息内容不能为空"));
+                    return 0;
+                }
             } else {
                 Json::StreamWriterBuilder wb;
                 extra = Json::writeString(wb, payload);

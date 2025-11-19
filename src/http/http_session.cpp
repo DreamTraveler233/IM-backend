@@ -45,6 +45,9 @@ HttpRequest::ptr HttpSession::recvRequest() {
         }
         // 如果解析完成（请求头解析完毕），则跳出循环
         if (parser->isFinished()) {
+            if (offset > 0) {
+                m_leftoverBuf.append(data + nparse, offset);
+            }
             break;
         }
     } while (true);
@@ -96,4 +99,25 @@ int HttpSession::sendResponse(HttpResponse::ptr rsp) {
     std::string data = ss.str();
     return writeFixSize(data.c_str(), data.size());
 }
+
+int HttpSession::read(void* buffer, size_t length) {
+    if (!m_leftoverBuf.empty()) {
+        size_t copy_len = std::min(length, m_leftoverBuf.size());
+        memcpy(buffer, m_leftoverBuf.data(), copy_len);
+        m_leftoverBuf = m_leftoverBuf.substr(copy_len);
+        return copy_len;
+    }
+    return SocketStream::read(buffer, length);
+}
+
+int HttpSession::read(ByteArray::ptr ba, size_t length) {
+    if (!m_leftoverBuf.empty()) {
+        size_t copy_len = std::min(length, m_leftoverBuf.size());
+        ba->write(m_leftoverBuf.data(), copy_len);
+        m_leftoverBuf = m_leftoverBuf.substr(copy_len);
+        return copy_len;
+    }
+    return SocketStream::read(ba, length);
+}
+
 }  // namespace CIM::http

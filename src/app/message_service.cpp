@@ -682,7 +682,13 @@ VoidResult MessageService::RevokeMessage(const uint64_t current_user_id, const u
         for (const auto& uid : update_uids) {
             Json::Value payload;
             payload["talk_mode"] = talk_mode;
-            payload["to_from_id"] = to_from_id;
+            // For single chat, compute to_from_id per receiver: it's always the other party's id
+            if (talk_mode == 1) {
+                payload["to_from_id"] = (Json::UInt64)(uid == current_user_id ? to_from_id
+                                                                                    : current_user_id);
+            } else {
+                payload["to_from_id"] = (Json::UInt64)to_from_id;
+            }
             payload["msg_text"] = digest_vec[index++];
             payload["updated_at"] = CIM::TimeUtil::NowToMS();
             CIM::api::WsGatewayModule::PushToUser(uid, "im.session.update", payload);
@@ -691,7 +697,12 @@ VoidResult MessageService::RevokeMessage(const uint64_t current_user_id, const u
         for (const auto& uid : clear_uids) {
             Json::Value payload;
             payload["talk_mode"] = talk_mode;
-            payload["to_from_id"] = to_from_id;
+            if (talk_mode == 1) {
+                payload["to_from_id"] = (Json::UInt64)(uid == current_user_id ? to_from_id
+                                                                                    : current_user_id);
+            } else {
+                payload["to_from_id"] = (Json::UInt64)to_from_id;
+            }
             payload["msg_text"] = Json::Value();
             payload["updated_at"] = CIM::TimeUtil::NowToMS();
             CIM::api::WsGatewayModule::PushToUser(uid, "im.session.update", payload);
@@ -1021,13 +1032,14 @@ MessageRecordResult MessageService::SendMessage(
         Json::Value payload;
         payload["talk_mode"] = talk_mode;
         payload["to_from_id"] = to_from_id;
+        payload["sender_id"] = (Json::UInt64)current_user_id;
         payload["msg_text"] = last_msg_digest;
         payload["updated_at"] = (Json::UInt64)CIM::TimeUtil::NowToMS();
 
         if (talk_mode == 1) {
-            // 单聊：通知接收方
+            // 单聊：不再在服务端做 ID 交换，统一推送标准 payload
+            // 前端根据 (talk_mode=1 && to_from_id == my_uid) ? sender_id : to_from_id 来判断会话索引
             CIM::api::WsGatewayModule::PushToUser(to_from_id, "im.session.update", payload);
-            // 同时通知当前用户以确保本端会话视图及时更新
             CIM::api::WsGatewayModule::PushToUser(current_user_id, "im.session.update", payload);
         } else {
             // 群聊：查出本群拥有会话快照的用户，并逐个推送

@@ -252,13 +252,14 @@ void WsGatewayModule::PushToUser(uint64_t uid, const std::string& event, const J
 void WsGatewayModule::PushImMessage(uint8_t talk_mode, uint64_t to_from_id, uint64_t from_id,
                                     const Json::Value& body) {
     Json::Value payload;
-    payload["to_from_id"] = (Json::UInt64)to_from_id;
-    payload["from_id"] = (Json::UInt64)from_id;
+    payload["to_from_id"] = to_from_id;
+    payload["from_id"] = from_id;
     payload["talk_mode"] = talk_mode;
     payload["body"] = body;
 
     if (talk_mode == 1) {
-        // 单聊：推送给对端用户；同时也推送给发送者的其它设备进行会话同步
+        // 单聊：推送给接收方和发送方
+        // 不再在服务端做 ID 交换，统一推送标准 payload
         PushToUser(to_from_id, "im.message", payload);
         PushToUser(from_id, "im.message", payload);
     } else {

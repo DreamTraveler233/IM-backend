@@ -38,6 +38,6 @@ sms:
 
 # WebSocket 配置
 websocket:
-    allow_unmasked_client_frames: 0   # 是否允许客户端未掩码帧（0严格遵循RFC，1兼容）
+    allow_unmasked_client_frames: 1   # 是否允许客户端未掩码帧（0严格遵循RFC，1兼容）
     message:
         max_size: 33554432               # 单条消息最大尺寸（32MB）

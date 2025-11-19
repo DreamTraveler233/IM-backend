@@ -35,5 +35,11 @@ class HttpSession : public SocketStream {
          *         <0 Socket异常
          */
     int sendResponse(HttpResponse::ptr rsp);
+
+    int read(void* buffer, size_t length) override;
+    int read(ByteArray::ptr ba, size_t length) override;
+
+   protected:
+    std::string m_leftoverBuf;
 };
 }  // namespace CIM::http

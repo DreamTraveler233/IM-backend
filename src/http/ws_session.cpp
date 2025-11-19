@@ -38,8 +38,8 @@ HttpRequest::ptr WSSession::handleShake() {
             std::string conn_lc = conn;
             for (auto& c : conn_lc) c = ::tolower(c);
             if (conn_lc.find("upgrade") == std::string::npos) {
-                CIM_LOG_INFO(g_logger) << "http header Connection not contains Upgrade, got: "
-                                       << conn;
+                CIM_LOG_INFO(g_logger)
+                    << "http header Connection not contains Upgrade, got: " << conn;
                 break;
             }
         }
@@ -123,6 +123,47 @@ WSFrameMessage::ptr WSRecvMessage(Stream* stream, bool client) {
 
         CIM_LOG_DEBUG(g_logger) << "WSFrameHead " << ws_head.toString();
 
+        // 读取Payload长度
+        uint64_t length = 0;
+        if (ws_head.payload == 126) {
+            uint16_t len = 0;
+            if (stream->readFixSize(&len, sizeof(len)) <= 0) break;
+            length = CIM::byteswap(len);
+        } else if (ws_head.payload == 127) {
+            uint64_t len = 0;
+            if (stream->readFixSize(&len, sizeof(len)) <= 0) break;
+            length = CIM::byteswap(len);
+        } else {
+            length = ws_head.payload;
+        }
+
+        // 检查最大长度限制
+        if ((cur_len + length) >= g_websocket_message_max_size->getValue()) {
+            CIM_LOG_WARN(g_logger)
+                << "WSFrameMessage length > " << g_websocket_message_max_size->getValue() << " ("
+                << (cur_len + length) << ")";
+            break;
+        }
+
+        // 读取掩码
+        char mask_key[4] = {0};
+        if (ws_head.mask) {
+            if (stream->readFixSize(mask_key, sizeof(mask_key)) <= 0) break;
+        }
+
+        // 读取Payload数据
+        std::string payload_data;
+        payload_data.resize(length);
+        if (length > 0) {
+            if (stream->readFixSize(&payload_data[0], length) <= 0) break;
+            if (ws_head.mask) {
+                for (uint64_t i = 0; i < length; ++i) {
+                    payload_data[i] ^= mask_key[i % 4];
+                }
+            }
+        }
+
+        // 处理控制帧
         if (ws_head.opcode == WSFrameHead::PING) {
             CIM_LOG_INFO(g_logger) << "PING";
             if (WSPong(stream) <= 0) break;
@@ -130,55 +171,29 @@ WSFrameMessage::ptr WSRecvMessage(Stream* stream, bool client) {
         } else if (ws_head.opcode == WSFrameHead::PONG) {
             // 忽略
             continue;
-        } else if (ws_head.opcode == WSFrameHead::CONTINUE ||
-                   ws_head.opcode == WSFrameHead::TEXT_FRAME ||
-                   ws_head.opcode == WSFrameHead::BIN_FRAME) {
+        } else if (ws_head.opcode == WSFrameHead::CLOSE) {
+            CIM_LOG_INFO(g_logger) << "CLOSE";
+            // 可以在此解析状态码和原因
+            WSClose(stream, 1000, "");  // 回复CLOSE
+            break;
+        }
+
+        // 处理数据帧
+        if (ws_head.opcode == WSFrameHead::CONTINUE || ws_head.opcode == WSFrameHead::TEXT_FRAME ||
+            ws_head.opcode == WSFrameHead::BIN_FRAME) {
             if (!client && !ws_head.mask) {
                 if (!g_ws_allow_unmasked_client_frames->getValue()) {
-                    CIM_LOG_WARN(g_logger)
-                        << "Unmasked WebSocket frame from client, closing connection (enforce RFC6455)";
-                    // 依据RFC6455返回 1002(Protocol Error) 后再关闭
+                    CIM_LOG_WARN(g_logger) << "Unmasked WebSocket frame from client, closing "
+                                              "connection (enforce RFC6455)";
                     WSClose(stream, 1002, "Client must mask frames");
                     break;
                 } else {
-                    CIM_LOG_WARN(g_logger)
+                    CIM_LOG_DEBUG(g_logger)
                         << "Unmasked WebSocket frame from client, allowed by config (compat mode)";
-                    // 兼容模式：不中断，继续按未掩码处理
                 }
             }
 
-            uint64_t length = 0;
-            if (ws_head.payload == 126) {
-                uint16_t len = 0;
-                if (stream->readFixSize(&len, sizeof(len)) <= 0) break;
-                length = CIM::byteswap(len);
-            } else if (ws_head.payload == 127) {
-                uint64_t len = 0;
-                if (stream->readFixSize(&len, sizeof(len)) <= 0) break;
-                length = CIM::byteswap(len);
-            } else {
-                length = ws_head.payload;
-            }
-
-            if ((cur_len + length) >= g_websocket_message_max_size->getValue()) {
-                CIM_LOG_WARN(g_logger)
-                    << "WSFrameMessage length > " << g_websocket_message_max_size->getValue()
-                    << " (" << (cur_len + length) << ")";
-                break;
-            }
-
-            char mask_key[4] = {0};
-            if (ws_head.mask) {
-                if (stream->readFixSize(mask_key, sizeof(mask_key)) <= 0) break;
-            }
-
-            data.resize(cur_len + length);
-            if (stream->readFixSize(&data[cur_len], length) <= 0) break;
-            if (ws_head.mask) {
-                for (uint64_t i = 0; i < length; ++i) {
-                    data[cur_len + i] ^= mask_key[i % 4];
-                }
-            }
+            data.append(payload_data);
             cur_len += length;
 
             if (!opcode && ws_head.opcode != WSFrameHead::CONTINUE) {
