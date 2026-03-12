@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 #include <ucontext.h>
 
 #include "core/base/noncopyable.hpp"

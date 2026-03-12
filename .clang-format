@@ -27,28 +27,6 @@ AllowShortLoopsOnASingleLine: true
 # 命名空间缩进
 NamespaceIndentation: None
 
-# 包含文件排序
-IncludeBlocks: Regroup
-IncludeCategories:
-  - Regex:           '^"core/.*'
-    Priority:        2
-  - Regex:           '^"infra/.*'
-    Priority:        3
-  - Regex:           '^"application/.*'
-    Priority:        4
-  - Regex:           '^"interface/.*'
-    Priority:        5
-  - Regex:           '^"domain/.*'
-    Priority:        6
-  - Regex:           '^"dto/.*'
-    Priority:        7
-  - Regex:           '^"model/.*'
-    Priority:        8
-  - Regex:           '^<.*'
-    Priority:        1
-  - Regex:           '.*'
-    Priority:        9
-
 # 构造函数初始化列表对齐
 ConstructorInitializerIndentWidth: 4
 ConstructorInitializerAllOnOneLineOrOnePerLine: true

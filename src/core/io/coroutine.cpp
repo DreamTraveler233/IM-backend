@@ -180,7 +180,9 @@ void Coroutine::SetThis(Coroutine *val) {
 
 Coroutine::ptr Coroutine::GetThis() {
     if (t_coroutine) {
-        // 当前协程存在，直接返回
+        if (!t_thread_coroutine) {
+            return nullptr;
+        }
         return t_coroutine->shared_from_this();
     }
 
@@ -189,7 +191,7 @@ Coroutine::ptr Coroutine::GetThis() {
     IM_ASSERT(t_coroutine == main_coroutine.get());
     // 设置主协程
     t_thread_coroutine = main_coroutine;
-    return t_coroutine->shared_from_this();
+    return t_thread_coroutine;
 }
 
 void Coroutine::YieldToReady() {

@@ -14,8 +14,15 @@
 
 #include "core/base/macro.hpp"
 #include "core/io/lock.hpp"
-
+#include "config_variable_base.hpp"
 #include "lexical_cast.hpp"
+
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <typeinfo>
+#include <vector>
 
 namespace IM {
 /**
@@ -158,11 +165,11 @@ class ConfigVar : public ConfigVariableBase {
         IM_ASSERT(key > 0);
         RWMutexType::WriteLock lock(m_mutex);
         if (m_cbs.find(key) != m_cbs.end()) {
-            IM_LOG_INFO(IM_LOG_ROOT()) << "Removing listener for config variable: " << getName()
+            IM_LOG_INFO(IM_LOG_ROOT()) << "Removing listener for config variable: " << this->getName()
                                        << " with key: " << key;
             m_cbs.erase(key);
         } else {
-            IM_LOG_WARN(IM_LOG_ROOT()) << "Trying to remove non-existent listener for config variable: " << getName()
+            IM_LOG_WARN(IM_LOG_ROOT()) << "Trying to remove non-existent listener for config variable: " << this->getName()
                                        << " with key: " << key;
         }
     }
